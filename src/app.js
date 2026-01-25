@@ -10,8 +10,8 @@ app.use(express.json());
 
 
 // HOME ROUTE
-app.get("/",(res)=>{
-   return res.send("Welcome to subscription management system !!");
+app.get("/",(req,res)=>{
+   return res.json({message:"Welcome to subscription management system !!"});
 });
 
 // ROUTES
