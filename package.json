@@ -1,0 +1,28 @@
+{
+  "name": "project-03",
+  "version": "1.0.0",
+  "description": "",
+  "repository": {
+    "type": "git",
+    "url": "git init"
+  },
+  "license": "ISC",
+  "author": "bikash kumar kc (kcbikash886@gmail.com)",
+  "type": "module",
+  "main": "index.js",
+  "scripts": {
+    "start": "nodemon node index.js",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "nodemon": "^3.1.11"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2",
+    "globals": "^17.1.0"
+  }
+}
