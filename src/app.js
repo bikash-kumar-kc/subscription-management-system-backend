@@ -5,27 +5,17 @@ import SubscriptionRoutes from "./resources/subscriptionResources/subscription.r
 
 const app = express();
 
-
 app.use(express.json());
 
-
 // HOME ROUTE
-app.get("/",(req,res)=>{
-   return res.json({message:"Welcome to subscription management system !!"});
+app.get("/", (req, res) => {
+  return res.json({ message: "Welcome to subscription management system !!" });
 });
 
 // ROUTES
 
-app.use("/api/v1/auth",AuthRoutes);
-app.use("/api/v1/users",UserRoutes);
-app.use("/api/v1/subscriptions",SubscriptionRoutes);
-
-
-
-
-
-
+app.use("/api/v1/auth", AuthRoutes);
+app.use("/api/v1/users", UserRoutes);
+app.use("/api/v1/subscriptions", SubscriptionRoutes);
 
 export default app;
-
-
