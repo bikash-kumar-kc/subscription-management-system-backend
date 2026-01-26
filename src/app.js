@@ -2,6 +2,7 @@ import express from "express";
 import AuthRoutes from "../src/resources/authResources/auth.routes.js";
 import UserRoutes from "./resources/userResources/user.routes.js";
 import SubscriptionRoutes from "./resources/subscriptionResources/subscription.routes.js";
+import globalErrorHandler from "./middleware/globalErrorHandler.js";
 
 const app = express();
 
@@ -17,5 +18,9 @@ app.get("/", (req, res) => {
 app.use("/api/v1/auth", AuthRoutes);
 app.use("/api/v1/users", UserRoutes);
 app.use("/api/v1/subscriptions", SubscriptionRoutes);
+
+
+// GLOBAL ERROR HANDLER
+app.use(globalErrorHandler);
 
 export default app;
