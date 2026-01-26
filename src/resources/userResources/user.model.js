@@ -35,22 +35,24 @@ const userSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-
 // Password hashing
 userSchema.pre("save", async function () {
   const password = this.password;
+  console.log("auth model");
 
   if (!this.isModified("password")) return;
 
   const salt = randomBytes(16).toString("hex");
-  const hashPassword = createHmac("256", salt).update(password).digest("hex");
+  const hashPassword = createHmac("sha256", salt)
+    .update(password)
+    .digest("hex");
   this.password = hashPassword;
   this.salt = salt;
 });
 
-userSchema.post("save", async function(){
-    console.log("user created successfully")
-})
+userSchema.post("save", async function () {
+  console.log("user created successfully");
+});
 
 const UserModel = mongoose.model("Users", userSchema);
 export default UserModel;
