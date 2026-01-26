@@ -3,10 +3,14 @@ import AuthRoutes from "../src/resources/authResources/auth.routes.js";
 import UserRoutes from "./resources/userResources/user.routes.js";
 import SubscriptionRoutes from "./resources/subscriptionResources/subscription.routes.js";
 import globalErrorHandler from "./middleware/globalErrorHandler.js";
-
+import cookieParser from "cookie-parser";
 const app = express();
 
+// MIDDLEWARE
 app.use(express.json());
+app.use(express.urlencoded({extended:false}));
+app.use(cookieParser());
+
 
 // HOME ROUTE
 app.get("/", (req, res) => {
