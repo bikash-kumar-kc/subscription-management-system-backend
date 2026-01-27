@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { createHmac, randomBytes } from "node:crypto";
+import { generateToken } from "../../services/jwt.js";
 
 const userSchema = new mongoose.Schema(
   {
@@ -54,9 +55,30 @@ userSchema.post("save", async function () {
   console.log("user created successfully");
 });
 
-userSchema.static("isUserExist",async function(email){
-  return await this.findOne({email});
-})
+userSchema.static("isUserExist", async function (email) {
+  return await this.findOne({ email });
+});
+
+userSchema.static("findUserByEmail", async function (email) {
+  return await this.findOne({ email });
+});
+
+userSchema.methods.matchPasswordAndGenerateToken = async function (
+  currentPassword,
+) {
+  const newHashPassword = createHmac("sha256", this.salt)
+    .update(currentPassword)
+    .digest("hex");
+
+  const isMatched = this.password === newHashPassword;
+
+  if (!isMatched) {
+    return false;
+  }
+
+  const token =  generateToken(this._id);
+  return token;
+};
 
 const UserModel = mongoose.model("Users", userSchema);
 export default UserModel;
