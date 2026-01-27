@@ -54,5 +54,9 @@ userSchema.post("save", async function () {
   console.log("user created successfully");
 });
 
+userSchema.static("isUserExist",async function(email){
+  return await this.findOne({email});
+})
+
 const UserModel = mongoose.model("Users", userSchema);
 export default UserModel;

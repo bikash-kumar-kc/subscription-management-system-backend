@@ -21,7 +21,7 @@ const globalErrorHandler = (err, req, res) => {
     error = new Error(message.join(","));
     error.statusCode = 400;
   }
-console.log("at global error handler...")
+
   return res.status(error.statusCode || 500).json({
     success: false,
     error: error.message,
