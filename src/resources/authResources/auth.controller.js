@@ -77,34 +77,42 @@ export const signIn = async (req, res, next) => {
 
     const { email, password } = req.body;
     const user = await UserModel.findUserByEmail(email);
-    const token = await user.matchPasswordAndGenerateToken(password);
-    if (!token) {
-      const error = new Error("Failed to generate token");
-      error.statusCode = 500;
+    if (!user) {
+      const error = new Error("User not found !!!");
+      error.statusCode = 404;
       next(error);
       return;
-    };
+    }
+    const token = await user.matchPasswordAndGenerateToken(password);
+    if (!token) {
+      const error = new Error("Password does not matched !!!");
+      error.statusCode = 401;
+      next(error);
+      return;
+    }
 
-    
-    const isProduction = !(config.NODE_ENV==="development");
+    const isProduction = !(config.NODE_ENV === "development");
 
     const cookieOptions = {
-      httpOnly:true,
-      secure:isProduction?true:false,
-      sameSite:isProduction?"none":"lax",
-      path:"/"
+      httpOnly: true,
+      secure: isProduction ? true : false,
+      sameSite: isProduction ? "none" : "lax",
+      path: "/",
     };
 
-    res.cookie("accessToken",token,{...cookieOptions,maxAge:24*60*60*1000});
+    res.cookie("accessToken", token, {
+      ...cookieOptions,
+      maxAge: 24 * 60 * 60 * 1000,
+    });
 
     return res.status(200).json({
-      success:true,
-      message:"User logged in successFully!",
-      data:{
-        id:user._id,
-        token:token,
-      }
-    })
+      success: true,
+      message: "User logged in successFully!",
+      data: {
+        id: user._id,
+        token: token,
+      },
+    });
   } catch (err) {
     const error = new Error("Problem in server!!!");
     error.errors = err.errors;
@@ -113,29 +121,25 @@ export const signIn = async (req, res, next) => {
   }
 };
 
-
-export const signOut = async (req,res,next)=>{
-
-  try{
-    const isProduction = !(config.NODE_ENV==="development");
-    const {accessToken}= req.cookies;
-    res.clearCookie("accessToken",{
-      httpOnly:true,
-      secure:isProduction?true:false,
-      sameSite:isProduction?"none":"lax",
-      path:"/"
+export const signOut = async (req, res, next) => {
+  try {
+    const isProduction = !(config.NODE_ENV === "development");
+    const { accessToken } = req.cookies;
+    res.clearCookie("accessToken", {
+      httpOnly: true,
+      secure: isProduction ? true : false,
+      sameSite: isProduction ? "none" : "lax",
+      path: "/",
     });
 
     return res.status(200).json({
-      success:true,
-      message:"Logout successfully!",
-      data:{
-        token:accessToken,
-      }
-    })
-  }catch(err){
-   next(err);
+      success: true,
+      message: "Logout successfully!",
+      data: {
+        token: accessToken,
+      },
+    });
+  } catch (err) {
+    next(err);
   }
 };
-
-

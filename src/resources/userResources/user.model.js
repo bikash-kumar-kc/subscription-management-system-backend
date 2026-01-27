@@ -28,6 +28,12 @@ const userSchema = new mongoose.Schema(
       minlength: 8,
     },
 
+    role:{
+      type:String,
+      default:"user",
+      enum:["admin","user"],
+    },
+
     salt: {
       type: String,
       trim: true,

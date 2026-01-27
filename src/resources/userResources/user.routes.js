@@ -1,9 +1,11 @@
 import express from "express";
+import { getUser, getUsers } from "./user.controller.js";
+import authenticate from "../../middleware/authenticate.js";
 
 const UserRoutes = express.Router();
 
-UserRoutes.get("/", async (req, res) => res.send({ message: "Get all users" }));
-UserRoutes.get("/:id", async (req, res) => res.send({ message: "Get a user" }));
+UserRoutes.get("/", authenticate, getUsers);
+UserRoutes.get("/:id", authenticate, getUser);
 UserRoutes.post("/", async (req, res) =>
   res.send({ message: "To create a new user" }),
 );

@@ -8,5 +8,5 @@ export const generateToken =(id)=>{
 };
 
 export const verifyToken =(token)=>{
-    return jwt.verify(token,config.JWT_SECRET_KEY)
+    return jwt.verify(token,config.JWT_SECRET_KEY,{expiresIn:String(config.JWT_TOKEN_EXPIRE)})
 }
