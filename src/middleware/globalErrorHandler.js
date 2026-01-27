@@ -1,5 +1,6 @@
-const globalErrorHandler = (err, req, res) => {
-  let error = { ...err };
+const globalErrorHandler = (err, req, res,next) => {
+  try {
+    let error = { ...err };
 
   // Mongoose bad ObjectId
   if (err.name === "CastError") {
@@ -28,6 +29,9 @@ const globalErrorHandler = (err, req, res) => {
     err_stack: error.stack,
     errors: error.errors || "undefined",
   });
+  } catch (error) {
+    next(error)
+  }
 };
 
 export default globalErrorHandler;

@@ -41,7 +41,7 @@ const SubscriptionSchema = new mongoose.Schema(
         "other",
       ],
     },
-    payMethod: {
+    paymentMethod: {
       type: String,
       required: true,
       trim: true,
