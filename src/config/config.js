@@ -14,6 +14,7 @@ const _config = {
   QSTASH_CURRENT_SIGNING_KEY:process.env.QSTASH_CURRENT_SIGNING_KEY,
   QSTASH_NEXT_SIGNING_KEY:process.env.QSTASH_NEXT_SIGNING_KEY,
   LOCAL_SERVER_URL:process.env.LOCAL_SERVER_URL,
+  APP_PASSWORD:process.env.APP_PASSWORD,
 };
 
 export const config = Object.freeze(_config);
