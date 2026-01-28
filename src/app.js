@@ -5,6 +5,7 @@ import SubscriptionRoutes from "./resources/subscriptionResources/subscription.r
 import globalErrorHandler from "./middleware/globalErrorHandler.js";
 import cookieParser from "cookie-parser";
 import arcjet from "./middleware/arcjet.middleware.js";
+import workflowRouter from "./resources/workflow/workflow.routes.js";
 const app = express();
 
 // MIDDLEWARE
@@ -24,6 +25,7 @@ app.get("/", (req, res) => {
 app.use("/api/v1/auth", AuthRoutes);
 app.use("/api/v1/users", UserRoutes);
 app.use("/api/v1/subscriptions", SubscriptionRoutes);
+app.use("/api/v1/workflows",workflowRouter);
 
 
 // GLOBAL ERROR HANDLER

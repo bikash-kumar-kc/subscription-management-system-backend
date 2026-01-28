@@ -1,3 +1,5 @@
+import { config } from "../../config/config.js";
+import { workflowClient } from "../../upstash/upstash.config.js";
 import Subscription from "../subscriptionResources/subscription.model.js";
 
 export const createSubscription = async (req, res, next) => {
@@ -6,6 +8,21 @@ export const createSubscription = async (req, res, next) => {
       ...req.body,
       user: req.user._id,
     });
+
+    const { workflowRunId } = await workflowClient.trigger({
+      url: `${config.LOCAL_SERVER_URL}/api/v1/workflows`,
+      body: {
+        subscriptionId: newSubscription._id,
+      },
+
+      headers: {
+        "content-type": "application/json",
+      },
+
+      retries: 0,
+    });
+
+    console.log(`WORKFLOW ID:: ${workflowRunId}`);
 
     if (!newSubscription) {
       return res

@@ -9,6 +9,11 @@ const _config = {
   JWT_TOKEN_EXPIRE: process.env.JWT_TOKEN_EXPIRE,
   ARCJET_TOKEN: process.env.ARCJET_TOKEN,
   ARCJECT_ENV: process.env.ARCJECT_ENV,
+  QSTASH_URL:process.env.QSTASH_URL,
+  QSTASH_TOKEN:process.env.QSTASH_TOKEN,
+  QSTASH_CURRENT_SIGNING_KEY:process.env.QSTASH_CURRENT_SIGNING_KEY,
+  QSTASH_NEXT_SIGNING_KEY:process.env.QSTASH_NEXT_SIGNING_KEY,
+  LOCAL_SERVER_URL:process.env.LOCAL_SERVER_URL,
 };
 
 export const config = Object.freeze(_config);
