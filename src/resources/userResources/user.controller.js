@@ -1,10 +1,14 @@
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import fs from "node:fs";
+import mongoose from "mongoose";
 
 import UserModel from "./user.model.js";
 
-import uploadFile from "../../services/cloudinary.js";
+import uploadFile, { deleteFile } from "../../services/cloudinary.js";
+import { config } from "../../config/config.js";
+import generatePublicKey from "../../utils/generatePublicKey.js";
+import Subscription from "../subscriptionResources/subscription.model.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -72,7 +76,7 @@ export const uploadProfile = async (req, res, next) => {
       return res.status(403).json({ success: false, message: "FORBIDDEN" });
     }
 
-    const user = await UserModel.findById(userId);
+    const user = await UserModel.findById(userId).select("-password");
 
     if (!user) {
       return res
@@ -137,7 +141,7 @@ export const uploadProfile = async (req, res, next) => {
 
     const error = {
       message:
-        process.env.NODE_ENV === "production"
+        config.NODE_ENV === "production"
           ? "An error occurred while uploading the profile image"
           : err.message,
       statusCode: err.statusCode || 500,
@@ -148,5 +152,132 @@ export const uploadProfile = async (req, res, next) => {
     }
 
     next(error);
+  }
+};
+
+export const deleteUser = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  try {
+    const userId = req.params.id;
+
+    if (!userId) {
+      return res
+        .status(400)
+        .json({ success: false, message: "User id is required!!!" });
+    }
+
+    if (userId !== req.user.id) {
+      return res
+        .status(403)
+        .json({ success: false, message: "FORBIDDEN ACCESS!!!" });
+    }
+
+    const user = await UserModel.findById(userId).select("-password");
+
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "USER NOT FOUND!!!" });
+    }
+
+    session.startTransaction();
+
+    console.info("User deletion initiated", {
+      userId: user._id,
+      email: user.email,
+      timestamp: new Date().toISOString(),
+    });
+
+    const deletionErrors = [];
+
+    // DELETE IMAGE...
+
+    if (user.imageUrl) {
+      try {
+        const publicKey = generatePublicKey(user.imageUrl);
+
+        if (publicKey) {
+          const isImageDeleted = await deleteFile(publicKey);
+
+          if (!isImageDeleted) {
+            deletionErrors.push({
+              resource: "profile_image",
+              error: "Failed to delete profile image from cloud storage",
+            });
+          } else {
+            deletionErrors.push({
+              resource: "profile_image",
+              error: "Unable to extract public key from image URL",
+            });
+          }
+        }
+      } catch (imageErr) {
+        console.error("Error deleting profile image:", imageErr);
+        deletionErrors.push({
+          resource: "profile_image",
+          error: imageErr.message,
+        });
+      }
+    }
+
+    // DELETE USER RELATED INFOS
+    try {
+      await Subscription.deleteMany([{ user: user._id }], { session });
+    } catch (error) {
+      console.error("Error during cascade deletion:", error);
+      throw new Error("Failed to delete related user data");
+    }
+
+    const deleteUser = await UserModel.deleteOne([{ _id: user.id }], {
+      session,
+    });
+
+    if (!deleteUser) {
+      throw new Error("problem in deleting user!!!");
+    }
+
+    // Commit transaction
+    await session.commitTransaction();
+
+    // Delete cookies
+
+    res.clearCookie("token");
+
+    // Log successful deletion
+    console.info("User deletion completed", {
+      userId: user._id,
+      email: user.email,
+      timestamp: new Date().toISOString(),
+      warnings: deletionErrors.length > 0 ? deletionErrors : undefined,
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "USER DELETED",
+      data: { id: req.user.id },
+    });
+  } catch (err) {
+    await session.abortTransaction();
+
+    // Log error with context
+    console.error("User deletion failed", {
+      userId: req.params.id,
+      error: err.message,
+      stack: err.stack,
+    });
+
+    const isProduction = config.NODE_ENV === "production";
+
+    const error = {
+      message: isProduction
+        ? "problem in deleting user's account"
+        : err.message,
+      statusCode: err.statusCode || 500,
+      stack: isProduction ? undefined : err.stack,
+    };
+
+    next(error);
+  } finally {
+    session.endSession();
   }
 };

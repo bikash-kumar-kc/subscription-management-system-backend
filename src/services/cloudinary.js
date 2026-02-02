@@ -17,4 +17,11 @@ const uploadFile = async ({
   return uploadResult;
 };
 
+export const deleteFile = async (publicKey) => {
+  const isImageDeleted = await cloudinary.uploader.destroy(
+    `sms_users_profile_image/${publicKey}`,
+  );
+  return isImageDeleted;
+};
+
 export default uploadFile;
