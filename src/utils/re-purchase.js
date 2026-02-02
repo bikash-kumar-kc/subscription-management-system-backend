@@ -1,6 +1,10 @@
-const rePurchase = (price) => {
-  const dis = 5;
-  return Math.ceil(price - (dis / 100) * price);
+const calculateRePurchasePrice = (price, discount = 5) => {
+  if (typeof price !== "number" || price <= 0) {
+    throw new Error("Price must be a positive number");
+  }
+
+  const discountedPrice = price - (discount / 100) * price;
+  return Math.ceil(discountedPrice);
 };
 
-export default rePurchase;
+export default calculateRePurchasePrice;

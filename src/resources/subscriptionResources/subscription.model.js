@@ -2,7 +2,14 @@ import mongoose from "mongoose";
 
 const SubscriptionSchema = new mongoose.Schema(
   {
-    name: {
+    service_provider: {
+      type: String,
+      required: [true, "Service provider's name is required"],
+      trim: true,
+      minLength: 2,
+      maxLength: 100,
+    },
+    package_Name: {
       type: String,
       required: [true, "Subscription name is required"],
       trim: true,
@@ -49,7 +56,7 @@ const SubscriptionSchema = new mongoose.Schema(
     status: {
       type: String,
       required: true,
-      enum: ["active", "cancel", "expired"],
+      enum: ["active", "cancel", "expired","paused"],
       default: "active",
     },
     startDate: {
@@ -122,6 +129,7 @@ const SubscriptionSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
+SubscriptionSchema.createIndex({ status: 1, renewalsDate: 1 });
 SubscriptionSchema.pre("save", async function () {
   // Auto-generate renewalsDate
   if (!this.renewalsDate) {
@@ -176,6 +184,19 @@ Subscription.methods.resume = function () {
   this.status = "active";
 
   return this.save();
+};
+
+Subscription.methods.canCancel = function () {
+  const now = new Date();
+  const start = new Date(this.startDate);
+  const yDays = Math.ceil(
+    (new Date(this.renewalsDate) - start) / (1000 * 60 * 60 * 24),
+  );
+
+  const daysUsed = (now - start) / (1000 * 60 * 60 * 24);
+  const maxCancelableDays = yDays * 0.2;
+
+  return daysUsed <= maxCancelableDays;
 };
 
 const Subscription = mongoose.model("Subscription", SubscriptionSchema);
