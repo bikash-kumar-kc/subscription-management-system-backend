@@ -13,6 +13,7 @@ SubscriptionRoutes.post("/",authenticate, createSubscription);
 SubscriptionRoutes.delete("/:id", async (req, res) =>
   res.send({ message: "Delete a subscription" }),
 );
+
 SubscriptionRoutes.get("/user/:id",authenticate,getUserSubscription);
 SubscriptionRoutes.put("/user/cancel/:id", async (req, res) =>
   res.send({ message: "Cancel a subscription" }),

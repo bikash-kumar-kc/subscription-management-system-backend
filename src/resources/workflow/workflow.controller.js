@@ -11,7 +11,7 @@ export const sendReminders = serve(async (context) => {
   const { subscriptionId } = context.requestPayload;
   const subscription = await fetchSubscription(context, subscriptionId);
 
-  if (!subscription || subscription.status !== "active") return;
+  if (!subscription || subscription.status !== "active") return; // it stop the tracking the subscription...
   const renewalDate = dayjs(subscription.renewalsDate);
 
   if (renewalDate.isBefore(dayjs())) {

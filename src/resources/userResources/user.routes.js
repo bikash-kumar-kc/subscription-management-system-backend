@@ -1,6 +1,7 @@
 import express from "express";
-import { getUser, getUsers } from "./user.controller.js";
+import { getUser, getUsers, uploadProfile } from "./user.controller.js";
 import authenticate from "../../middleware/authenticate.js";
+import upload from "../../services/multer.js";
 
 const UserRoutes = express.Router();
 
@@ -15,5 +16,7 @@ UserRoutes.put("/:id", async (req, res) =>
 UserRoutes.delete("/:id", async (req, res) =>
   res.send({ message: "Delete a user" }),
 );
+
+UserRoutes.patch("/:id",upload.single("profileImage"),uploadProfile);
 
 export default UserRoutes;

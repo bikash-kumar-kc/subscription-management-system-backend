@@ -15,6 +15,10 @@ const _config = {
   QSTASH_NEXT_SIGNING_KEY:process.env.QSTASH_NEXT_SIGNING_KEY,
   LOCAL_SERVER_URL:process.env.LOCAL_SERVER_URL,
   APP_PASSWORD:process.env.APP_PASSWORD,
+  CLOUDINARY_NAME:process.env.CLOUDINARY_CLOUD_NAME,
+  CLOUDINARY_API_SECRET:process.env.CLOUDINARY_API_SECRET,
+  CLOUDINARY_API_KEY:process.env.CLOUDINARY_API_KEY
+
 };
 
 export const config = Object.freeze(_config);
