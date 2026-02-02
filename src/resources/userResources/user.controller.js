@@ -37,7 +37,7 @@ export const getUsers = async (req, res, next) => {
 
 export const getUser = async (req, res, next) => {
   try {
-    const id = req.params.id;
+    const id = req.user.id;
     if (!id) {
       return res
         .status(400)
@@ -84,6 +84,37 @@ export const uploadProfile = async (req, res, next) => {
         .json({ success: false, message: "User not found!!!" });
     }
 
+    const deletionErrors = [];
+
+    // if profile already exists...
+    if (user.imageUrl) {
+      try {
+        const publicKey = generatePublicKey(user.imageUrl);
+
+        if (publicKey) {
+          const isImageDeleted = await deleteFile(publicKey);
+
+          if (!isImageDeleted) {
+            deletionErrors.push({
+              resource: "profile_image",
+              error: "Failed to delete profile image from cloud storage",
+            });
+          } else {
+            deletionErrors.push({
+              resource: "profile_image",
+              error: "Unable to extract public key from image URL",
+            });
+          }
+        }
+      } catch (imageErr) {
+        console.error("Error deleting profile image:", imageErr);
+        deletionErrors.push({
+          resource: "profile_image",
+          error: imageErr.message,
+        });
+      }
+    }
+
     const coverImageMimeType = req.files.profileImage.mimetype
       .split("/")
       .at(-1);
@@ -127,6 +158,7 @@ export const uploadProfile = async (req, res, next) => {
       data: {
         profileUrl: updateUser.imageUrl,
       },
+      warning: deletionErrors.length > 0 ? deletionErrors : undefined,
     });
   } catch (err) {
     if (filePath) {

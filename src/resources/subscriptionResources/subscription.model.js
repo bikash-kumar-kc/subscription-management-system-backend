@@ -77,13 +77,53 @@ const SubscriptionSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+
+    pauseLimit: {
+      type: Number,
+      default: function () {
+        const limits = {
+          daily: 0,
+          weekly: 1,
+          monthly: 2,
+          yearly: 6,
+        };
+
+        return limits[this.frequency];
+      },
+    },
+
+    pausesUsed: {
+      type: Number,
+      default: 0,
+    },
+
+    pausesRemaining: {
+      type: Number,
+      default: function () {
+        return this.pauseLimit;
+      },
+    },
+
+    isPaused: {
+      type: Boolean,
+      default: false,
+    },
+
+    pausedAt: {
+      type: Date,
+      validate: {
+        validator: function (value) {
+          return value > this.startDate && value < this.renewalsDate;
+        },
+        message: "Invalid paused time !!!",
+      },
+    },
   },
   { timestamps: true },
 );
 
 SubscriptionSchema.pre("save", async function () {
-
-    // Auto-generate renewalsDate
+  // Auto-generate renewalsDate
   if (!this.renewalsDate) {
     const renewalPeriods = {
       daily: 1,
@@ -96,17 +136,47 @@ SubscriptionSchema.pre("save", async function () {
     this.renewalsDate.setDate(
       this.renewalsDate.getDate() + renewalPeriods[this.frequency],
     );
-  };
-
-
-  // Auto-update the status if renewalsDate passed
-  if(this.renewalsDate < new Date()){
-    this.status ="expired"
   }
 
-
+  // Auto-update the status if renewalsDate passed
+  if (this.renewalsDate < new Date()) {
+    this.status = "expired";
+  }
 });
 
+SubscriptionSchema.methods.canPause = function () {
+  return this.pausesRemaining > 0 && !this.isPaused;
+};
 
-const Subscription = mongoose.model("Subscription",SubscriptionSchema);
+Subscription.methods.paused = function () {
+  if (this.canPause()) {
+    this.status = "paused";
+    this.pausedAt = new Date();
+    this.pausesUsed = this.pausesUsed + 1;
+    this.pausesRemaining -= 1;
+    return this.save();
+  }
+
+  throw new Error("Cannot pause: No pauses remaining or already paused");
+};
+
+Subscription.methods.resume = function () {
+  if (!this.isPaused) {
+    throw new Error("Cannot resume : subscription is not paused!!!");
+  }
+
+  this.isPaused = false;
+  const totalPausedDuration = Math.ceil(
+    (new Date() - this.pausedAt) / (1000 * 60 * 60 * 24),
+  );
+
+  this.renewalsDate.setDate(this.renewalsDate.getDate() + totalPausedDuration);
+
+  this.pausedAt = null;
+  this.status = "active";
+
+  return this.save();
+};
+
+const Subscription = mongoose.model("Subscription", SubscriptionSchema);
 export default Subscription;
