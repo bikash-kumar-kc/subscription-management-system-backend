@@ -135,6 +135,8 @@ const SubscriptionSchema = new mongoose.Schema(
 );
 
 SubscriptionSchema.createIndex({ status: 1, renewalsDate: 1 });
+SubscriptionSchema.createIndex({canRenew:1,user:1});
+
 SubscriptionSchema.pre("save", async function () {
   // Auto-generate renewalsDate
   if (!this.renewalsDate) {

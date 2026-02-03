@@ -4,6 +4,7 @@ import moneyToRefund from "../../utils/moneyToRefund.js";
 import calculateRePurchasePrice from "../../utils/re-purchase.js";
 import calculateNewPrice from "../../utils/renew.js";
 import Subscription from "../subscriptionResources/subscription.model.js";
+import Usermodel from "../userResources/user.model.js";
 
 export const createSubscription = async (req, res, next) => {
   try {
@@ -294,6 +295,44 @@ export const renewSubscription = async (req, res, next) => {
     const isProduction = config.NODE_ENV === "production" ? true : false;
     const error = {
       message: isProduction ? "Problem in renewing subscription" : err.message,
+      statusCode: err.statusCode || 500,
+      stack: isProduction ? err.stack : undefined,
+    };
+
+    next(error);
+  }
+};
+
+export const upcommingRenewalsSubscriptions = async (req, res, next) => {
+  try {
+    const user = await Usermodel.findById(req.user.id);
+
+    if (!user)
+      res.status(404).json({ success: false, message: "User not found !!!" });
+
+    const subscriptions = await Subscription.find({
+      canRenew: true,
+      user: user._id,
+    });
+
+    if (!subscriptions)
+      res.status(200).json({
+        success: true,
+        message: "No subscription for renewels!!!",
+        data: { subscriptions: [] },
+      });
+
+    return res.status(200).json({
+      success: true,
+      message: "Got Subscriptions!",
+      data: {
+        subscriptions,
+      },
+    });
+  } catch (err) {
+    const isProduction = config.NODE_ENV === "production" ? true : false;
+    const error = {
+      message: isProduction ? "Problem in getting subscriptions" : err.message,
       statusCode: err.statusCode || 500,
       stack: isProduction ? err.stack : undefined,
     };
