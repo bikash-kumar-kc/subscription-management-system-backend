@@ -341,4 +341,158 @@ export const upcommingRenewalsSubscriptions = async (req, res, next) => {
   }
 };
 
+export const cancelSubscriptions = async (req, res, next) => {
+  try {
+    const user = await Usermodel.findById(req.user.id);
 
+    if (!user)
+      res.status(404).json({ success: false, Message: "User not found!!!" });
+
+    const allSubscriptions = await Subscription.find({
+      status: "active",
+      user: req.user.id,
+    });
+
+    if (!allSubscriptions)
+      res.status(200).message({
+        success: false,
+        message: "No subscription can cancelled!!!",
+        data: {
+          cancelSubscriptions: [{}],
+          totalSubscriptionCancelled: 0,
+        },
+      });
+
+    const cancelableSubscriptions = allSubscriptions.filter(
+      (eachSubscription) => eachSubscription.canCancel(),
+    );
+
+    const successfulCancels = [{}];
+    const unsuccessfulCancels = [{}];
+
+    for (const sub of cancelableSubscriptions) {
+      const isCancelled = await Subscription.updateOne(
+        {
+          _id: sub._id,
+        },
+        {
+          $set: {
+            status: "cancel",
+          },
+        },
+        {
+          new: true,
+        },
+      );
+
+      if (isCancelled) {
+        const costToReturn = moneyToRefund(sub.price);
+        successfulCancels.push({
+          serviceProvider: sub.service_provider,
+          serviceName: sub.package_Name,
+          price: sub.price,
+          returnAmount: costToReturn,
+          totalDaysServiceUsed: Math.ceil(
+            (new Date(this.renewalsDate) - new Date(this.startDate)) /
+              (1000 * 60 * 60 * 24),
+          ),
+        });
+      } else
+        unsuccessfulCancels.push({
+          serviceProvider: sub.service_provider,
+          serviceName: sub.package_Name,
+        });
+    }
+
+    // ---------------------email-----------------------
+
+    return res.status(200).json({
+      success: true,
+      message: "Successfully cancelled subscription!!!",
+      data: {
+        cancelSubscriptions: successfulCancels,
+        totalSubscriptionCancelled: successfulCancels.length,
+        failureToCancelSubscriptions: unsuccessfulCancels,
+        totalSubscriptionFailedToCancelled: unsuccessfulCancels.length,
+      },
+    });
+  } catch (err) {
+    const isProduction = config.NODE_ENV === "production" ? true : false;
+    const error = {
+      message: isProduction
+        ? "Problem in cancelling  subscriptions"
+        : err.message,
+      statusCode: err.statusCode || 500,
+      stack: isProduction ? err.stack : undefined,
+    };
+
+    next(error);
+  }
+};
+
+export const deleteSubscription = async (req, res, next) => {
+  try {
+    const subscriptionId = req.params.id;
+    if (!subscriptionId) throw new Error("Subscription Id is required!!!");
+
+    const subscription = await Subscription.findById(subscriptionId);
+
+    if (subscription.user.toString() !== req.user.id)
+      res.status(403).json({ success: false, message: "FORBIDDEN!!!" });
+
+    if (subscription.status != "cancel" || subscription.status != "expired")
+      throw new Error("Subscription can not delete!!!");
+
+    const isDeleted = await Subscription.deleteOne({ _id: subscriptionId });
+
+    if (!isDeleted) throw new Error("Problem in deleting Subscription!!!");
+
+    return res.status(200).json({
+      success: true,
+      message: "Delete Successfully!",
+      data: {
+        id: subscription._id,
+      },
+    });
+  } catch (err) {
+    const isProduction = config.NODE_ENV === "production" ? true : false;
+    const error = {
+      message: isProduction ? "Problem in delete subscription" : err.message,
+      statusCode: err.statusCode || 500,
+      stack: isProduction ? err.stack : undefined,
+    };
+
+    next(error);
+  }
+};
+
+export const deleteSubscriptions = async (req, res, next) => {
+  try {
+    const user = await Usermodel.findById(req.user.id);
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found!!!" });
+
+    const isDeleted = await Subscription.deleteMany({
+      user: req.user.id,
+      status: { $in: ["expired", "cancel"] },
+    });
+    return res.status(200).json({
+      success: true,
+      messasge: "Deletes Successfully!",
+      data: {
+        totalDeleteCount: isDeleted.deletedCount,
+      },
+    });
+  } catch (err) {
+    const isProduction = config.NODE_ENV === "production" ? true : false;
+    const error = {
+      message: isProduction ? "Problem in delete subscriptions" : err.message,
+      statusCode: err.statusCode || 500,
+      stack: isProduction ? err.stack : undefined,
+    };
+
+    next(error);
+  }
+};
