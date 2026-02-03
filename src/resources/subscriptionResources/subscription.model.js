@@ -1,5 +1,12 @@
 import mongoose from "mongoose";
 
+const limits = {
+  daily: 0,
+  weekly: 1,
+  monthly: 2,
+  yearly: 6,
+};
+
 const SubscriptionSchema = new mongoose.Schema(
   {
     service_provider: {
@@ -56,7 +63,7 @@ const SubscriptionSchema = new mongoose.Schema(
     status: {
       type: String,
       required: true,
-      enum: ["active", "cancel", "expired","paused"],
+      enum: ["active", "cancel", "expired", "paused"],
       default: "active",
     },
     startDate: {
@@ -88,13 +95,6 @@ const SubscriptionSchema = new mongoose.Schema(
     pauseLimit: {
       type: Number,
       default: function () {
-        const limits = {
-          daily: 0,
-          weekly: 1,
-          monthly: 2,
-          yearly: 6,
-        };
-
         return limits[this.frequency];
       },
     },
@@ -124,6 +124,11 @@ const SubscriptionSchema = new mongoose.Schema(
         },
         message: "Invalid paused time !!!",
       },
+    },
+
+    canRenew: {
+      type: Boolean,
+      default: false,
     },
   },
   { timestamps: true },
@@ -156,7 +161,7 @@ SubscriptionSchema.methods.canPause = function () {
   return this.pausesRemaining > 0 && !this.isPaused;
 };
 
-Subscription.methods.paused = function () {
+SubscriptionSchema.methods.paused = function () {
   if (this.canPause()) {
     this.status = "paused";
     this.pausedAt = new Date();
@@ -197,6 +202,27 @@ Subscription.methods.canCancel = function () {
   const maxCancelableDays = yDays * 0.2;
 
   return daysUsed <= maxCancelableDays;
+};
+
+Subscription.methods.repurchase = function () {
+  this.startDate = new Date();
+  this.pauseLimit = limits[this.frequency];
+  this.pausesUsed = 0;
+  this.pausesRemaining = this.pauseLimit;
+  this.isPaused = false;
+  this.pausedAt = null;
+
+  return this.save();
+};
+
+Subscription.methods.canRenew = function () {
+  const can_renew =
+    this.canRenew &&
+    !this.isPaused &&
+    this.status !== "cancel" &&
+    this.status !== "expired";
+
+  return can_renew;
 };
 
 const Subscription = mongoose.model("Subscription", SubscriptionSchema);

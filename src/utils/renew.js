@@ -19,7 +19,7 @@ const calculateNewPrice = (actualPrice, renewalDate) => {
 
   const discountedPrice = actualPrice - (discount[key] / 100) * actualPrice;
 
-  return Math.ceil(discountedPrice);
+  return {price:Math.ceil(discountedPrice),discountPercent:discount[key]};
 };
 
 export default calculateNewPrice;
