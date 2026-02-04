@@ -193,9 +193,9 @@ Subscription.methods.resume = async function () {
   this.pausedAt = null;
   this.status = "active";
 
-   await this.save();
+  await this.save();
 
-   return  this.constructor.findById(this._id);
+  return this.constructor.findById(this._id);
 };
 
 Subscription.methods.canCancel = function () {
@@ -211,15 +211,18 @@ Subscription.methods.canCancel = function () {
   return daysUsed <= maxCancelableDays;
 };
 
-Subscription.methods.repurchase = function () {
+Subscription.methods.repurchase = async function () {
   this.startDate = new Date();
   this.pauseLimit = limits[this.frequency];
   this.pausesUsed = 0;
   this.pausesRemaining = this.pauseLimit;
   this.isPaused = false;
   this.pausedAt = null;
+  this.can_renew = true;
 
-  return this.save();
+  await this.save();
+
+  return this.constructor.findById(this._id);
 };
 
 Subscription.methods.canRenew = function () {

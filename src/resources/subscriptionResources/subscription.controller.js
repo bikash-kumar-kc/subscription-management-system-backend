@@ -12,6 +12,8 @@ import ConfirmationModel, { FeedbackModel } from "./confirmation.model.js";
 import { sendEmailForSubscriptionPaused } from "../../utils/send-pause-email.js";
 import { sendEmailForSubscriptionResume } from "../../utils/send-resume-email.js";
 import { sendEmailForMassSubcriptionCancellation } from "../../utils/mass-cancellation-email.js";
+import { sendEmailForRepurchaseConfirmation } from "../../utils/repurchase-email.js";
+import { sendEmailForRepurchaseConfirmationMoney } from "../../utils/repurchase-email-money.js";
 
 export const createSubscription = async (req, res, next) => {
   try {
@@ -427,6 +429,68 @@ export const repurchaseSubscription = async (req, res, next) => {
       throw new Error("Problem in repurchasing the subscription!!!");
     }
 
+    const { workflowRunId } = await workflowClient.trigger({
+      url: `${config.LOCAL_SERVER_URL}/api/v1/workflows`,
+      body: {
+        subscriptionId: repurchased._id,
+      },
+      headers: {
+        "content-type": "application/json",
+      },
+
+      retries: 0,
+    });
+
+    console.log(`WORKFLOW_ID: ${workflowRunId}`);
+
+    const { newRepurchasePrice, discount } = calculateRePurchasePrice(
+      subscription.price,
+    );
+
+    // payment...
+    const isRepurchased = await sendEmailForRepurchaseConfirmationMoney({
+      serviceProvider: subscription.service_provider,
+      serviceName: subscription.package_Name,
+      newRepurchasePrice,
+      timeOfRepurchased: new Date(),
+      refundTo: subscription.user.name,
+      emailTo: subscription.user.email,
+      paymentMethod: subscription.paymentMethod,
+    });
+
+    if (!isRepurchased) {
+      await session.abortTransaction();
+      return res.status(500).json({
+        success: false,
+        message: "Failed to payment for repurchase subscription!!!",
+      });
+    }
+
+    // email...
+    const isEmailSent = await sendEmailForRepurchaseConfirmation({
+      serviceProvider: repurchased.serviceProvider,
+      serviceName: repurchased.package_Name,
+      emailTo: subscription.user.email,
+      repurchaseAmount: newRepurchasePrice,
+      discount,
+      refundTo: subscription.user.name,
+    });
+
+    if (!isEmailSent) {
+      console.log("Failed to send repurchase confirmation email!!");
+      await ConfirmationModel.create(
+        [
+          {
+            serviceProvider: subscription.service_provider,
+            serviceName: subscription.package_Name,
+            cancelAt: new Date(),
+            user: subscription.user,
+            message: "Your service is repurchased!",
+          },
+        ],
+        { session },
+      );
+    }
     await session.commitTransaction();
     return res.status(200).json({
       success: true,
@@ -470,6 +534,7 @@ export const renewSubscription = async (req, res, next) => {
       subscription.price,
       subscription.renewalsDate,
     );
+    
 
     return res.status(200).json({
       success: true,

@@ -4,7 +4,10 @@ const calculateRePurchasePrice = (price, discount = 5) => {
   }
 
   const discountedPrice = price - (discount / 100) * price;
-  return Math.ceil(discountedPrice);
+  return {
+    newRepurchasePrice: Math.ceil(discountedPrice),
+    discountRate: discount,
+  };
 };
 
 export default calculateRePurchasePrice;
