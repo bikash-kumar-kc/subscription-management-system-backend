@@ -135,8 +135,8 @@ const SubscriptionSchema = new mongoose.Schema(
 );
 
 SubscriptionSchema.createIndex({ status: 1, renewalsDate: 1 });
-SubscriptionSchema.createIndex({canRenew:1,user:1});
-SubscriptionSchema.createIndex({status:1,user:1});
+SubscriptionSchema.createIndex({ canRenew: 1, user: 1 });
+SubscriptionSchema.createIndex({ status: 1, user: 1 });
 
 SubscriptionSchema.pre("save", async function () {
   // Auto-generate renewalsDate
@@ -164,13 +164,15 @@ SubscriptionSchema.methods.canPause = function () {
   return this.pausesRemaining > 0 && !this.isPaused;
 };
 
-SubscriptionSchema.methods.paused = function () {
+SubscriptionSchema.methods.paused = async function () {
   if (this.canPause()) {
     this.status = "paused";
     this.pausedAt = new Date();
     this.pausesUsed = this.pausesUsed + 1;
     this.pausesRemaining -= 1;
-    return this.save();
+    await this.save();
+    // Fetch a fresh copy from the database
+    return this.constructor.findById(this._id);
   }
 
   throw new Error("Cannot pause: No pauses remaining or already paused");

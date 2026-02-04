@@ -9,6 +9,7 @@ import Usermodel from "../userResources/user.model.js";
 import { sendSubscriptionCancelledMail } from "../../utils/sendSubscriptionCancelledMail.js";
 import { sendMoneyRefundEmail } from "../../utils/sendMoneyRefundEmail.js";
 import ConfirmationModel, { FeedbackModel } from "./confirmation.model.js";
+import { sendEmailForSubscriptionPaused } from "../../utils/send-pause-email.js";
 
 export const createSubscription = async (req, res, next) => {
   try {
@@ -214,11 +215,25 @@ export const cancelSubscription = async (req, res, next) => {
 };
 
 export const pauseSubscription = async (req, res, next) => {
+  const session = await mongoose.startSession();
+
+  session.startTransaction();
+
   try {
     const subscriptionId = req.params.id;
 
-    const subscription = await Subscription.findById(subscriptionId);
+    if (!subscriptionId || !mongoose.Types.ObjectId.isValid(subscriptionId)) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: "Either no subscriptionId or invalid!!!",
+      });
+    }
+    const subscription = await Subscription.findById(subscriptionId)
+      .populate("user", "name email")
+      .session(session);
     if (!subscription || !subscription.canPause()) {
+      await session.abortTransaction();
       throw new Error("Subscription can not be paused");
     }
 
@@ -226,12 +241,38 @@ export const pauseSubscription = async (req, res, next) => {
       return res.status(403).json({ success: false, message: "FORBIDDEN" });
     }
 
-    const pauseSub = await subscription.paused();
+    const pauseSub = await subscription.paused().session(session);
 
     if (!pauseSub) {
+      await session.abortTransaction();
       throw new Error("Failed to paushed the subscription!!!");
     }
 
+    const isEmailSent = await sendEmailForSubscriptionPaused({
+      serviceProvider: subscription.service_provider,
+      serviceName: subscription.package_Name,
+      pausesUsed: pauseSub.pausesUsed,
+      pausesRemaining: pauseSub.pausesRemaining,
+      emailTo: subscription.user.email,
+      refundTo: subscription.user.name,
+    });
+
+    if (!isEmailSent) {
+      console.log("Failed to send pauses confirmation email!!");
+      await ConfirmationModel.create(
+        [
+          {
+            serviceProvider: subscription.service_provider,
+            serviceName: subscription.package_Name,
+            cancelAt: new Date(),
+            user: subscription.user,
+          },
+        ],
+        { session },
+      );
+    }
+
+    await session.commitTransaction();
     return res.status(200).json({
       success: true,
       message: "Subscription paused!",
@@ -243,16 +284,17 @@ export const pauseSubscription = async (req, res, next) => {
       },
     });
   } catch (err) {
+    await session.abortTransaction();
     const isProduction = config.NODE_ENV === "production" ? true : false;
     const error = {
-      message: isProduction
-        ? "Problem in cancelling subscription"
-        : err.message,
+      message: isProduction ? "Problem in paushing subscription" : err.message,
       statusCode: err.statusCode || 500,
-      stack: isProduction ? err.stack : undefined,
+      stack: isProduction ? undefined : err.stack,
     };
 
     next(error);
+  } finally {
+    await session.endSession();
   }
 };
 
