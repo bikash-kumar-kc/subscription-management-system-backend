@@ -4,7 +4,7 @@ const moneyToRefund = (price, returnPercentage = 60) => {
   }
 
   const refundAmount = Math.floor((returnPercentage / 100) * price);
-  return Math.ceil(refundAmount);
+  return { refundAmount, refundPercentage: returnPercentage };
 };
 
 export default moneyToRefund;
