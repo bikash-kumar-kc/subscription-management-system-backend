@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import { config } from "../../config/config.js";
 import { workflowClient } from "../../upstash/upstash.config.js";
 import moneyToRefund from "../../utils/moneyToRefund.js";
@@ -5,6 +6,9 @@ import calculateRePurchasePrice from "../../utils/re-purchase.js";
 import calculateNewPrice from "../../utils/renew.js";
 import Subscription from "../subscriptionResources/subscription.model.js";
 import Usermodel from "../userResources/user.model.js";
+import { sendSubscriptionCancelledMail } from "../../utils/sendSubscriptionCancelledMail.js";
+import { sendMoneyRefundEmail } from "../../utils/sendMoneyRefundEmail.js";
+import ConfirmationModel, { FeedbackModel } from "./confirmation.model.js";
 
 export const createSubscription = async (req, res, next) => {
   try {
@@ -70,19 +74,29 @@ export const getUserSubscriptions = async (req, res, next) => {
 };
 
 export const cancelSubscription = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
     const subscriptionId = req.params.id;
     if (!subscriptionId) {
       throw new Error("Subscription id is required!!!");
     }
 
-    const subscription = await Subscription.findById(subscriptionId);
+    const subscription = await Subscription.findById(subscriptionId)
+      .populate("user", "name email")
+      .session(session);
+
     const isValidSubscription =
       subscription.status === "cancel" ||
       subscription.status === "paused" ||
       subscription.status === "expired";
     if (!subscription || isValidSubscription) {
       throw new Error("Subscription cannot canceled!!!");
+    }
+    if (subscription.user.toString() !== req.user.id) {
+      await session.abortTransaction();
+      return res.status(403).json({ success: false, message: "FORBIDDEN!!!" });
     }
 
     const canCanceled = await subscription.canCancel();
@@ -91,11 +105,46 @@ export const cancelSubscription = async (req, res, next) => {
       throw new Error("Subscription can not canceled !!!");
     }
 
-    if (subscription.user.toString() !== req.user.id) {
-      return res.status(403).json({ success: false, message: "FORBIDDEN!!!" });
+    const { reason, feedBack } = req.body;
+
+    const isFeedbackSaved = await FeedbackModel.create(
+      [
+        {
+          serviceProvider: subscription.service_provider,
+          serviceName: subscription.package_Name,
+          reason,
+          feedBack,
+          user: req.user.id,
+        },
+      ],
+      { session },
+    );
+
+    if (!isFeedbackSaved) {
+      console.log("Problem to Create feeback!!");
     }
 
-    const constToRefund = moneyToRefund(subscription.price);
+    const refundCalculation = moneyToRefund(subscription.price);
+    const { refundAmount } = refundCalculation;
+
+    // email that confirm that money is refunded ...
+    const isRefundSuccessed = await sendMoneyRefundEmail({
+      serviceProvider: subscription.service_provider,
+      serviceName: subscription.package_Name,
+      refundAmount,
+      timeOfRefund: new Date(),
+      refundTo: subscription.user.name,
+      emailTo: subscription.user.email,
+      paymentMethod: subscription.paymentMethod,
+    });
+
+    // email that confirm that service provider has cancelled the subscription...
+    if (!isRefundSuccessed) {
+      await session.abortTransaction();
+      return res
+        .status(500)
+        .json({ success: false, message: "Failed to Cancelled!!!" });
+    }
 
     const subscriptionCanceled = await Subscription.findByIdAndUpdate(
       subscriptionId,
@@ -106,19 +155,46 @@ export const cancelSubscription = async (req, res, next) => {
       },
       {
         new: true,
+        session,
       },
     );
 
     if (!subscriptionCanceled) {
+      await session.abortTransaction();
       throw new Error("Unable to cancel subscription !!!");
     }
+
+    const isCancelledSuccessed = await sendSubscriptionCancelledMail({
+      serviceProvider: subscription.service_provider,
+      serviceName: subscription.package_Name,
+      refundTo: subscription.user.name,
+      emailTo: subscription.user.email,
+      message: `your service ${subscription.package_Name} has been cancelled at ${new Date()}`,
+    });
+
+    if (!isCancelledSuccessed) {
+      console.log("Failed to send service cancelled email");
+      await ConfirmationModel.create(
+        [
+          {
+            serviceProvider: subscription.service_provider,
+            serviceName: subscription.package_Name,
+            cancelAt: new Date(),
+            user: req.user.id,
+          },
+        ],
+        { session },
+      );
+    }
+
+    await session.commitTransaction();
 
     return res.status(200).json({
       success: true,
       message: "Subscription cancelled !",
       data: {
         id: subscription._id,
-        moneyToRefund: constToRefund,
+        moneyToRefund: refundAmount,
       },
     });
   } catch (err) {
@@ -128,10 +204,12 @@ export const cancelSubscription = async (req, res, next) => {
         ? "Problem in cancelling subscription"
         : err.message,
       statusCode: err.statusCode || 500,
-      stack: isProduction ? err.stack : undefined,
+      stack: isProduction ? undefined : err.stack,
     };
 
     next(error);
+  } finally {
+    await session.endSession();
   }
 };
 
