@@ -29,6 +29,12 @@ const ConfirmationSchema = new mongoose.Schema(
       index: true,
       ref: "user",
     },
+
+    message: {
+      type: String,
+      required: true,
+      trim: true,
+    },
   },
   { timestamps: true },
 );

@@ -178,7 +178,7 @@ SubscriptionSchema.methods.paused = async function () {
   throw new Error("Cannot pause: No pauses remaining or already paused");
 };
 
-Subscription.methods.resume = function () {
+Subscription.methods.resume = async function () {
   if (!this.isPaused) {
     throw new Error("Cannot resume : subscription is not paused!!!");
   }
@@ -193,7 +193,9 @@ Subscription.methods.resume = function () {
   this.pausedAt = null;
   this.status = "active";
 
-  return this.save();
+   await this.save();
+
+   return  this.constructor.findById(this._id);
 };
 
 Subscription.methods.canCancel = function () {

@@ -10,6 +10,8 @@ import { sendSubscriptionCancelledMail } from "../../utils/sendSubscriptionCance
 import { sendMoneyRefundEmail } from "../../utils/sendMoneyRefundEmail.js";
 import ConfirmationModel, { FeedbackModel } from "./confirmation.model.js";
 import { sendEmailForSubscriptionPaused } from "../../utils/send-pause-email.js";
+import { sendEmailForSubscriptionResume } from "../../utils/send-resume-email.js";
+import { sendEmailForMassSubcriptionCancellation } from "../../utils/mass-cancellation-email.js";
 
 export const createSubscription = async (req, res, next) => {
   try {
@@ -182,6 +184,7 @@ export const cancelSubscription = async (req, res, next) => {
             serviceName: subscription.package_Name,
             cancelAt: new Date(),
             user: req.user.id,
+            message: "Your service is cancelled!",
           },
         ],
         { session },
@@ -266,6 +269,7 @@ export const pauseSubscription = async (req, res, next) => {
             serviceName: subscription.package_Name,
             cancelAt: new Date(),
             user: subscription.user,
+            message: "Your service is paused!",
           },
         ],
         { session },
@@ -299,24 +303,66 @@ export const pauseSubscription = async (req, res, next) => {
 };
 
 export const resumeSubscription = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const subscriptionId = req.params.id;
-    const subscription = await Subscription.findById(subscriptionId);
+    if (!subscriptionId || !mongoose.Types.ObjectId.isValid(subscriptionId)) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: "Either subcripton Id missing or invalid !!!",
+      });
+    }
+    const subscription = await Subscription.findById(subscriptionId)
+      .populate("user", "name email")
+      .session(session);
 
     if (!subscription || subscription.canPause()) {
+      await session.abortTransaction();
       throw new Error("Subscription can not resumed!!!");
     }
 
     if (subscription.user.toString() !== req.user.id) {
+      await session.abortTransaction();
       return res.status(403).json({ success: false, message: "FORBIDDEN!!!" });
     }
 
-    const resumeSub = await subscription.resume();
+    const resumeSub = await subscription.resume().session(session);
 
     if (!resumeSub) {
+      await session.abortTransaction();
       throw new Error("Problem in continuing the subscription!!!");
     }
 
+    const isEmailSent = await sendEmailForSubscriptionResume({
+      serviceProvider: subscription.service_provider,
+      serviceName: subscription.package_Name,
+      newRenewalsDate: resumeSub.renewalsDate,
+      pauseAt: subscription.pausedAt,
+      pausesUsed: subscription.pausesUsed,
+      pausesRemaining: subscription.pausesRemaining,
+      refundTo: subscription.user.name,
+      emailTo: subscription.user.email,
+    });
+
+    if (!isEmailSent) {
+      console.log("Failed to send resume confirmation!!");
+      await ConfirmationModel.create(
+        [
+          {
+            serviceProvider: subscription.service_provider,
+            serviceName: subscription.package_Name,
+            cancelAt: new Date(),
+            user: subscription.user,
+            message: "Your service is resumed!",
+          },
+        ],
+        { session },
+      );
+    }
+
+    await session.commitTransaction();
     return res.status(200).json({
       success: true,
       message: "subscription continued !!!",
@@ -328,41 +374,60 @@ export const resumeSubscription = async (req, res, next) => {
       },
     });
   } catch (err) {
+    await session.abortTransaction();
     const isProduction = config.NODE_ENV === "production" ? true : false;
     const error = {
       message: isProduction
         ? "Problem in cancelling subscription"
         : err.message,
       statusCode: err.statusCode || 500,
-      stack: isProduction ? err.stack : undefined,
+      stack: isProduction ? undefined : err.stack,
     };
 
     next(error);
+  } finally {
+    await session.endSession();
   }
 };
 
+// todo---
 export const repurchaseSubscription = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const subscriptionId = req.params.id;
-    const subscription = await Subscription.findById(subscriptionId);
+    if (!subscriptionId || !mongoose.Types.ObjectId.isValid(subscriptionId)) {
+      await session.abortTransaction();
+      return res.status(400).json({
+        success: false,
+        message: "Either subcripton Id missing or invalid !!!",
+      });
+    }
+    const subscription = await Subscription.findById(subscriptionId)
+      .populate("user", "name email")
+      .session(session);
 
     if (
       !subscription ||
       subscription.status !== "expired" ||
       subscription.status !== "cancel"
     ) {
+      await session.abortTransaction();
       throw new Error("Subscription can not be repurchased");
     }
 
     if (subscription.user.toString() !== req.user.id) {
+      await session.abortTransaction();
       return res.status(403).json({ success: false, message: "FORBIDDEN!!!" });
     }
 
-    const repurchased = await subscription.repurchase();
+    const repurchased = await subscription.repurchase().session(session);
     if (!repurchased) {
+      await session.abortTransaction();
       throw new Error("Problem in repurchasing the subscription!!!");
     }
 
+    await session.commitTransaction();
     return res.status(200).json({
       success: true,
       message: "Re-purchased successfully!!!",
@@ -372,19 +437,23 @@ export const repurchaseSubscription = async (req, res, next) => {
       },
     });
   } catch (err) {
+    await session.abortTransaction();
     const isProduction = config.NODE_ENV === "production" ? true : false;
     const error = {
       message: isProduction
-        ? "Problem in cancelling subscription"
+        ? "Problem in repurchasing subscription"
         : err.message,
       statusCode: err.statusCode || 500,
-      stack: isProduction ? err.stack : undefined,
+      stack: isProduction ? undefined : err.stack,
     };
 
     next(error);
+  } finally {
+    await session.endSession();
   }
 };
 
+// todo---
 export const renewSubscription = async (req, res, next) => {
   try {
     const subscriptionId = req.params.id;
@@ -462,26 +531,31 @@ export const upcommingRenewalsSubscriptions = async (req, res, next) => {
 };
 
 export const cancelSubscriptions = async (req, res, next) => {
-  try {
-    const user = await Usermodel.findById(req.user.id);
+  const session = await mongoose.startSession();
+  session.startTransaction();
 
-    if (!user)
+  try {
+    const user = await Usermodel.findById(req.user.id).session(session);
+
+    if (!user) {
+      await session.abortTransaction();
       res.status(404).json({ success: false, Message: "User not found!!!" });
+    }
 
     const allSubscriptions = await Subscription.find({
       status: "active",
       user: req.user.id,
-    });
+    }).session(session);
 
-    if (!allSubscriptions)
-      res.status(200).message({
-        success: false,
-        message: "No subscription can cancelled!!!",
-        data: {
-          cancelSubscriptions: [{}],
-          totalSubscriptionCancelled: 0,
-        },
-      });
+    if (!allSubscriptions) await session.abortTransaction();
+    res.status(200).message({
+      success: false,
+      message: "No subscription can cancelled!!!",
+      data: {
+        cancelSubscriptions: [{}],
+        totalSubscriptionCancelled: 0,
+      },
+    });
 
     const cancelableSubscriptions = allSubscriptions.filter(
       (eachSubscription) => eachSubscription.canCancel(),
@@ -501,6 +575,7 @@ export const cancelSubscriptions = async (req, res, next) => {
           },
         },
         {
+          session,
           new: true,
         },
       );
@@ -525,6 +600,18 @@ export const cancelSubscriptions = async (req, res, next) => {
     }
 
     // ---------------------email-----------------------
+
+    const isEmailSent = await sendEmailForMassSubcriptionCancellation({
+      successfulCancellations: successfulCancels,
+      unsuccessfulCancellations: unsuccessfulCancels,
+      refundTo: user.name,
+      emailTo: user.email,
+    });
+
+    if (!isEmailSent) {
+      console.log("Failed to send mass cancellation email!!");
+      // no record for it...
+    }
 
     return res.status(200).json({
       success: true,
