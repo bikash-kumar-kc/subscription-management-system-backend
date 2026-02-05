@@ -14,6 +14,9 @@ import { sendEmailForSubscriptionResume } from "../../utils/send-resume-email.js
 import { sendEmailForMassSubcriptionCancellation } from "../../utils/mass-cancellation-email.js";
 import { sendEmailForRepurchaseConfirmation } from "../../utils/repurchase-email.js";
 import { sendEmailForRepurchaseConfirmationMoney } from "../../utils/repurchase-email-money.js";
+import { limits } from "../subscriptionResources/subscription.model.js";
+import { sendEmailForSubscriptionRenew } from "../../utils/renew-subscription-email.js";
+import { sendEmailForSubscriptionRenewMoney } from "../../utils/renew-money-email.js";
 
 export const createSubscription = async (req, res, next) => {
   try {
@@ -21,6 +24,12 @@ export const createSubscription = async (req, res, next) => {
       ...req.body,
       user: req.user._id,
     });
+
+    if (!newSubscription) {
+      return res
+        .status(500)
+        .json({ success: false, message: "Subscription not created!!!" });
+    }
 
     const { workflowRunId } = await workflowClient.trigger({
       url: `${config.LOCAL_SERVER_URL}/api/v1/workflows`,
@@ -36,12 +45,6 @@ export const createSubscription = async (req, res, next) => {
     });
 
     console.log(`WORKFLOW ID:: ${workflowRunId}`);
-
-    if (!newSubscription) {
-      return res
-        .status(500)
-        .json({ success: false, message: "Subscription not created!!!" });
-    }
 
     return res
       .status(201)
@@ -365,6 +368,20 @@ export const resumeSubscription = async (req, res, next) => {
     }
 
     await session.commitTransaction();
+    const { workflowRunId } = await workflowClient.trigger({
+      url: `${config.LOCAL_SERVER_URL}/api/v1/workflows`,
+      body: {
+        subscriptionId: subscription._id,
+      },
+
+      headers: {
+        "content-type": "application/json",
+      },
+
+      retries: 0,
+    });
+
+    console.log(`WORKFLOW ID:: ${workflowRunId}`);
     return res.status(200).json({
       success: true,
       message: "subscription continued !!!",
@@ -519,23 +536,93 @@ export const repurchaseSubscription = async (req, res, next) => {
 
 // todo---
 export const renewSubscription = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
   try {
     const subscriptionId = req.params.id;
-    if (!subscriptionId) throw new Error("Subscription Id is required!!!");
-    const subscription = await Subscription.findById(subscriptionId);
+    if (!subscriptionId) {
+      await session.abortTransaction();
+      throw new Error("Subscription Id is required!!!");
+    }
+    const subscription =
+      await Subscription.findById(subscriptionId).session(session);
 
-    if (!subscription || !subscription.canRenew())
+    if (!subscription || !subscription.canRenew()) {
+      await session.abortTransaction();
       throw new Error("Subscription can not renewed!!!");
+    }
 
-    if (subscription.user.toString() !== req.user.id)
-      res.status(4033).json({ success: false, message: "FORBIDDEN!!!" });
+    if (subscription.user.toString() !== req.user.id) {
+      await session.abortTransaction();
+      res.status(403).json({ success: false, message: "FORBIDDEN!!!" });
+    }
 
     const { price: priceToRenew, discountPercent } = calculateNewPrice(
       subscription.price,
       subscription.renewalsDate,
     );
-    
 
+    const isPaymentSuccessful = await sendEmailForSubscriptionRenewMoney({
+      serviceProvider: subscription.service_provider,
+      serviceName: subscription.serviceName,
+      startDate: new Date(),
+      newPrice: priceToRenew,
+      paymentMethod: subscription.paymentMethod,
+      refundTo: subscription.user.name,
+      emailTo: subscription.user.email,
+    });
+
+    if (!isPaymentSuccessful) {
+      await session.abortTransaction();
+      return res
+        .status(500)
+        .json({ success: false, message: "Payment Process failed!!!" });
+    }
+
+    subscription.price = priceToRenew;
+    subscription.status = "active";
+    subscription.startDate = new Date();
+    subscription.pauseLimit = limits[subscription.frequency];
+    subscription.pausesUsed = 0;
+    subscription.pausesRemaining = limits[subscription.frequency];
+    subscription.isPaused = false;
+    subscription.pausedAt = null;
+    subscription.canRenew = true;
+
+    await subscription.save({ session });
+
+    const renewSubscription = await Subscription.findById(
+      subscription._id,
+    ).session(session);
+
+    const isEmailSent = sendEmailForSubscriptionRenew({
+      serviceProvider: renewSubscription.service_provider,
+      serviceName: renewSubscription.serviceName,
+      startDate: renewSubscription.startDate,
+      newPrice: renewSubscription.price,
+      oldPrice: subscription.price,
+      renewalsDate: renewSubscription.renewalsDate,
+      refundTo: subscription.user.name,
+      emailTo: subscription.user.email,
+    });
+
+    if (!isEmailSent) {
+      console.log("Problem in sending renewels confirmation!!");
+      await ConfirmationModel.create(
+        [
+          {
+            serviceProvider: subscription.service_provider,
+            serviceName: subscription.package_Name,
+            cancelAt: new Date(),
+            user: subscription.user,
+            message: "Your service is renewed!",
+          },
+        ],
+        { session },
+      );
+    }
+
+    await session.commitTransaction();
     return res.status(200).json({
       success: true,
       message: "Renewed Successfully!!!",
@@ -546,6 +633,7 @@ export const renewSubscription = async (req, res, next) => {
       },
     });
   } catch (err) {
+    await session.abortTransaction();
     const isProduction = config.NODE_ENV === "production" ? true : false;
     const error = {
       message: isProduction ? "Problem in renewing subscription" : err.message,
@@ -554,6 +642,8 @@ export const renewSubscription = async (req, res, next) => {
     };
 
     next(error);
+  } finally {
+    await session.endSession();
   }
 };
 

@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const limits = {
+export const limits = {
   daily: 0,
   weekly: 1,
   monthly: 2,
