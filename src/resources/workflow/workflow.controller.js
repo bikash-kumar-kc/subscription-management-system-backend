@@ -9,10 +9,10 @@ const REMINDERS = [6, 5, 2, 1];
 
 export const sendReminders = serve(async (context) => {
   const { subscriptionId } = context.requestPayload;
-  const subscription = await fetchSubscription(context, subscriptionId);
+  let subscription = await fetchSubscription(context, subscriptionId);
 
   if (!subscription || subscription.status !== "active") return; // it stop the tracking the subscription...
-  const renewalDate = dayjs(subscription.renewalsDate);
+  let renewalDate = dayjs(subscription.renewalsDate);
 
   if (renewalDate.isBefore(dayjs())) {
     console.log(
@@ -22,7 +22,7 @@ export const sendReminders = serve(async (context) => {
   }
 
   for (const daysBefore of REMINDERS) {
-    const reminderDate = renewalDate.subtract(daysBefore, "day");
+    let reminderDate = renewalDate.subtract(daysBefore, "day");
 
     if (reminderDate.isAfter(dayjs())) {
       await sleepUntilReminder(
@@ -30,6 +30,11 @@ export const sendReminders = serve(async (context) => {
         `Remider ${daysBefore} days before`,
         reminderDate,
       );
+
+      subscription = await fetchSubscription(context, subscriptionId);
+      if (!subscription || subscription.status !== "active") return; // it stop the tracking the subscription...
+      renewalDate = dayjs(subscription.renewalsDate);
+      reminderDate = renewalDate.subtract(daysBefore, "day");
     }
 
     if (dayjs().isSame(reminderDate, "day"))
