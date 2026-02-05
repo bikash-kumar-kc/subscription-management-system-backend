@@ -6,14 +6,14 @@ import globalErrorHandler from "./middleware/globalErrorHandler.js";
 import cookieParser from "cookie-parser";
 import arcjet from "./middleware/arcjet.middleware.js";
 import workflowRouter from "./resources/workflow/workflow.routes.js";
+import { stripHook } from "./stripe/stripe.controller.js";
 const app = express();
 
 // MIDDLEWARE
 app.use(express.json());
-app.use(express.urlencoded({extended:false}));
+app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(arcjet);
-
 
 // HOME ROUTE
 app.get("/", (req, res) => {
@@ -25,8 +25,12 @@ app.get("/", (req, res) => {
 app.use("/api/v1/auth", AuthRoutes);
 app.use("/api/v1/users", UserRoutes);
 app.use("/api/v1/subscriptions", SubscriptionRoutes);
-app.use("/api/v1/workflows",workflowRouter);
-
+app.post(
+  "/stripe-webhook",
+  express.raw({ type: "application/json" }),
+  stripHook,
+);
+app.use("/api/v1/workflows", workflowRouter);
 
 // GLOBAL ERROR HANDLER
 app.use(globalErrorHandler);

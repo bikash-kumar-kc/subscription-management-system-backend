@@ -1,0 +1,37 @@
+import mongoose from "mongoose";
+
+const PaymentSchema = new mongoose.Schema(
+  {
+    orderId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "product",
+      required: true,
+      trim: true,
+    },
+
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "user",
+      required: true,
+      trim: true,
+    },
+
+    serviceProvider: {
+      type: String,
+      trim: true,
+      minLength: [3, "Service provider must contain characters greater than 3"],
+      index: true,
+    },
+    status: {
+      type: String,
+      enum: ["paid", "unpaid"],
+      default: "unpaid",
+      required: true,
+    },
+  },
+  { timestamps: true },
+);
+
+PaymentSchema.create({ userId: 1, orderId: true });
+const PaymentModel = mongoose.model("payment", PaymentSchema);
+export default PaymentModel;

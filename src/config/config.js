@@ -21,6 +21,7 @@ const _config = {
   STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
   SUCCESS_URL:process.env.SUCCESS_URL,
   UNSUCCESS_URL:process.env.UNSUCCESS_URL,
+  STRIPE_WEBHOOK_SECRET:process.env.STRIPE_WEBHOOK_SECRET,
 };
 
 export const config = Object.freeze(_config);

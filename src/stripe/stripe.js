@@ -5,6 +5,9 @@ const stripePaymentProcess = async ({
   paymentMethod,
   mode = "subscription",
   item,
+  userId,
+  orderId,
+  serviceProvider,
 }) => {
   try {
     const session = await stripe.checkout.sessions.create({
@@ -24,6 +27,11 @@ const stripePaymentProcess = async ({
       ],
       success_url: config.SUCCESS_URL,
       cancel_url: config.UNSUCCESS_URL,
+      metadata: {
+        userId,
+        orderId,
+        serviceProvider,
+      },
     });
 
     return session.url;

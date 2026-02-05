@@ -3,6 +3,8 @@ import { config } from "../config/config";
 import ProductModel from "../resources/product/product.model";
 import UserModel from "../resources/userResources/user.model";
 import stripePaymentProcess from "./stripe";
+import stripe from "./client";
+import PaymentModel from "../resources/payment/payment.model";
 
 export const paymentInitiator = async (req, res, next) => {
   try {
@@ -43,6 +45,8 @@ export const paymentInitiator = async (req, res, next) => {
       item: paymentData,
       paymentMethod,
       mode,
+      userId: user._id,
+      orderId: product._id,
     });
 
     if (!url) {
@@ -65,5 +69,51 @@ export const paymentInitiator = async (req, res, next) => {
     };
 
     next(error);
+  }
+};
+
+export const stripHook = async (req, res) => {
+  let event;
+  const sig = req.headers["stripe-signature"];
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      config.STRIPE_WEBHOOK_SECRET,
+    );
+  } catch (err) {
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === "checkout.session.completed") {
+    const session = event.data.object;
+    const userId = session.metadata.userId;
+    const orderId = session.metadata.orderId;
+    const serviceProvider = session.metadata.orderId;
+
+    await PaymentModel.create({
+      userId,
+      orderId,
+      serviceProvider,
+      status: "paid",
+    });
+
+    return res
+      .status(200)
+      .json({ success: true, message: "payment successful!" });
+  } else {
+    const session = event.data.object;
+    const userId = session.metadata.userId;
+    const orderId = session.metadata.orderId;
+    const serviceProvider = session.metadata.orderId;
+
+    await PaymentModel.create({
+      userId,
+      orderId,
+      serviceProvider,
+      status: "unpaid",
+    });
+    return res.status(200).json({ success: true, message: "payment failed!" });
   }
 };
