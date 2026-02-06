@@ -17,14 +17,50 @@ import { sendEmailForRepurchaseConfirmationMoney } from "../../utils/repurchase-
 import { limits } from "../subscriptionResources/subscription.model.js";
 import { sendEmailForSubscriptionRenew } from "../../utils/renew-subscription-email.js";
 import { sendEmailForSubscriptionRenewMoney } from "../../utils/renew-money-email.js";
+import ProductModel from "../product/product.model.js";
+import PaymentModel from "../payment/payment.model.js";
+import { sendEmailForSubcriptionCreated } from "../../utils/subscription-created-email.js";
 
 export const createSubscription = async (req, res, next) => {
+  const {
+    productId,
+    serviceProvider,
+    serviceName,
+    currency,
+    frequency,
+    category,
+    paymentMethod,
+    status,
+  } = req.body;
   try {
-    const newSubscription = await Subscription.create({
-      ...req.body,
+    if (!productId || !mongoose.Types.ObjectId.isValid(productId))
+      throw new Error("Product is either required or invalid!!!");
+
+    const isPayment = await PaymentModel.find({ orderId: productId });
+    console.log(isPayment);
+    if (!isPayment[0] || isPayment[0].status !== "paid")
+      return res
+        .status(400)
+        .json({ success: false, message: "PAYMENT ISSUE!!!" });
+
+    const product = await ProductModel.findById(isPayment[0].orderId);
+
+    if (!product) throw new Error("Product not available!!!");
+    let newSubscription = await Subscription({
+      service_provider: serviceProvider,
+      package_Name: serviceName,
+      price: product.price,
+      currency,
+      frequency,
+      category,
+      paymentMethod,
+      status,
+      startDate: new Date(),
+      pausedAt: new Date(),
       user: req.user._id,
     });
-
+    newSubscription = await newSubscription.save();
+    newSubscription = await newSubscription.populate("user", "name email");
     if (!newSubscription) {
       return res
         .status(500)
@@ -46,9 +82,32 @@ export const createSubscription = async (req, res, next) => {
 
     console.log(`WORKFLOW ID:: ${workflowRunId}`);
 
-    return res
-      .status(201)
-      .json({ success: true, data: { Subscription: newSubscription } });
+    const isEmailSent = await sendEmailForSubcriptionCreated({
+      serviceProvider: newSubscription.service_provider,
+      serviceName: newSubscription.package_Name,
+      startDate: newSubscription.startDate,
+      renewalsDate: newSubscription.renewalsDate,
+      price: newSubscription.price,
+      emailTo: newSubscription.user.email,
+      refundTo: newSubscription.user.name,
+    });
+
+    if (!isEmailSent) {
+      console.log("Problem in sending subscription created confirmation!!");
+      await ConfirmationModel.create({
+        serviceProvider: newSubscription.service_provider,
+        serviceName: newSubscription.package_Name,
+        cancelAt: new Date(),
+        user: newSubscription.user,
+        message: "Subscription is created!",
+      });
+    }
+
+    return res.status(201).json({
+      success: true,
+      message: "subscription created!",
+      data: { Subscription: newSubscription },
+    });
   } catch (err) {
     const error = {};
     error.message = err.message;
