@@ -1,5 +1,5 @@
 import express from "express";
-import { createSubscription, getUserSubscription } from "./subscription.controller.js";
+import { createSubscription, getUserSubscriptions } from "./subscription.controller.js";
 import authenticate from "../../middleware/authenticate.js";
 
 const SubscriptionRoutes = express.Router();
@@ -14,7 +14,7 @@ SubscriptionRoutes.delete("/:id", async (req, res) =>
   res.send({ message: "Delete a subscription" }),
 );
 
-SubscriptionRoutes.get("/user/:id",authenticate,getUserSubscription);
+SubscriptionRoutes.get("/user/:id",authenticate,getUserSubscriptions);
 SubscriptionRoutes.put("/user/cancel/:id", async (req, res) =>
   res.send({ message: "Cancel a subscription" }),
 );

@@ -9,7 +9,7 @@ const startServer = async () => {
     console.log(`the server is running at PORT:: ${config.PORT}`);
 
     // start cron-job
-    startCronJobs();
+    startCronJobs.start();
   });
 };
 

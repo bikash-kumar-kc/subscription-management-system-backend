@@ -1,10 +1,10 @@
 import mongoose from "mongoose";
-import { config } from "../config/config";
-import ProductModel from "../resources/product/product.model";
-import UserModel from "../resources/userResources/user.model";
-import stripePaymentProcess from "./stripe";
-import stripe from "./client";
-import PaymentModel from "../resources/payment/payment.model";
+import { config } from "../config/config.js";
+import ProductModel from "../resources/product/product.model.js";
+import UserModel from "../resources/userResources/user.model.js";
+import stripePaymentProcess from "./stripe.js";
+import stripe from "./client.js";
+import PaymentModel from "../resources/payment/payment.model.js";
 
 export const paymentInitiator = async (req, res, next) => {
   try {

@@ -134,9 +134,9 @@ const SubscriptionSchema = new mongoose.Schema(
   { timestamps: true },
 );
 
-SubscriptionSchema.createIndex({ status: 1, renewalsDate: 1 });
-SubscriptionSchema.createIndex({ canRenew: 1, user: 1 });
-SubscriptionSchema.createIndex({ status: 1, user: 1 });
+SubscriptionSchema.index({ status: 1, renewalsDate: 1 });
+SubscriptionSchema.index({ canRenew: 1, user: 1 });
+SubscriptionSchema.index({ status: 1, user: 1 });
 
 SubscriptionSchema.pre("save", async function () {
   // Auto-generate renewalsDate
@@ -178,7 +178,7 @@ SubscriptionSchema.methods.paused = async function () {
   throw new Error("Cannot pause: No pauses remaining or already paused");
 };
 
-Subscription.methods.resume = async function () {
+SubscriptionSchema.methods.resume = async function () {
   if (!this.isPaused) {
     throw new Error("Cannot resume : subscription is not paused!!!");
   }
@@ -198,7 +198,7 @@ Subscription.methods.resume = async function () {
   return this.constructor.findById(this._id);
 };
 
-Subscription.methods.canCancel = function () {
+SubscriptionSchema.methods.canCancel = function () {
   const now = new Date();
   const start = new Date(this.startDate);
   const yDays = Math.ceil(
@@ -211,7 +211,7 @@ Subscription.methods.canCancel = function () {
   return daysUsed <= maxCancelableDays;
 };
 
-Subscription.methods.repurchase = async function () {
+SubscriptionSchema.methods.repurchase = async function () {
   this.startDate = new Date();
   this.pauseLimit = limits[this.frequency];
   this.pausesUsed = 0;
@@ -225,7 +225,7 @@ Subscription.methods.repurchase = async function () {
   return this.constructor.findById(this._id);
 };
 
-Subscription.methods.canRenew = function () {
+SubscriptionSchema.methods.can_renew = function () {
   const can_renew =
     this.canRenew &&
     !this.isPaused &&

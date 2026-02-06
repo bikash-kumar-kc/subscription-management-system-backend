@@ -1,9 +1,10 @@
-import cron from "node:cron";
-import Status from "../resources/statusResources/status.Resources.model";
+import { CronJob } from "cron";
+import Subscription from "../resources/subscriptionResources/subscription.model.js";
 
-const startCronJobs = () => {
-  cron.schedule(" 0 * * * * ", async () => {
-    const result = await Status.updateMany(
+const startCronJobs = new CronJob(
+  " 0 * * * * ",
+  async () => {
+    const result_1 = await Subscription.updateMany(
       {
         status: "active",
         renewalsDate: { $lt: new Date() },
@@ -15,8 +16,30 @@ const startCronJobs = () => {
       },
     );
 
-    console.log(`Marked ${result.modifiedCount} Subscription as expired`);
-  });
-};
+    const result_2 = await Subscription.updateMany(
+      {
+        $expr: {
+          $gte: [
+            { $subtract: ["$$NOW", "$startDate"] },
+            1000 * 60 * 60 * 24 * 7,
+          ],
+        },
+        status: "active",
+      },
+      [
+        {
+          $set: {
+            canRenew: true,
+          },
+        },
+      ],
+    );
+
+    console.log(`Marked ${result_1.modifiedCount} Subscription as expired`);
+    console.log(`Marked ${result_2.modifiedCount} Subscription as can renew`);
+  },
+  () => console.log("status is checked!!!"),
+  false,
+);
 
 export default startCronJobs;
