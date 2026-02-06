@@ -21,6 +21,9 @@ const stripePaymentProcess = async ({
               name: item.name,
             },
             unit_amount: item.amount || 1,
+            recurring: {
+              interval: "month",
+            },
           },
           quantity: item.quantity,
         },

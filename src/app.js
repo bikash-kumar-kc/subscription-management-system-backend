@@ -4,11 +4,12 @@ import UserRoutes from "./resources/userResources/user.routes.js";
 import SubscriptionRoutes from "./resources/subscriptionResources/subscription.routes.js";
 import globalErrorHandler from "./middleware/globalErrorHandler.js";
 import cookieParser from "cookie-parser";
-import arcjet from "./middleware/arcjet.middleware.js";
+// import arcjet from "./middleware/arcjet.middleware.js";
 import workflowRouter from "./resources/workflow/workflow.routes.js";
 import { stripHook } from "./stripe/stripe.controller.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import stripeRouter from "./stripe/stripe.route.js";
 
 const app = express();
 
@@ -16,11 +17,19 @@ const app = express();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+
+
+
+app.post(
+  "/stripe-webhook",
+  express.raw({ type: "application/json" }),
+  stripHook,
+);
 // MIDDLEWARE
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
-app.use(arcjet);
+// app.use(arcjet);
 app.use(
   "/static_files",
   express.static(path.join(__dirname, "../public/static_files")),
@@ -35,11 +44,8 @@ app.get("/", (req, res) => {
 app.use("/api/v1/auth", AuthRoutes);
 app.use("/api/v1/users", UserRoutes);
 app.use("/api/v1/subscriptions", SubscriptionRoutes);
-app.post(
-  "/stripe-webhook",
-  express.raw({ type: "application/json" }),
-  stripHook,
-);
+app.use("/payment",stripeRouter)
+
 app.use("/api/v1/workflows", workflowRouter);
 
 // GLOBAL ERROR HANDLER

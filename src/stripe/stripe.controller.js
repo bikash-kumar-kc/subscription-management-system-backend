@@ -45,8 +45,8 @@ export const paymentInitiator = async (req, res, next) => {
       item: paymentData,
       paymentMethod,
       mode,
-      userId: user._id,
-      orderId: product._id,
+      userId: user._id.toString(),
+      orderId: product._id.toString(),
     });
 
     if (!url) {
@@ -73,6 +73,7 @@ export const paymentInitiator = async (req, res, next) => {
 };
 
 export const stripHook = async (req, res) => {
+  console.log("-------------------here----------------");
   let event;
   const sig = req.headers["stripe-signature"];
 
@@ -82,38 +83,40 @@ export const stripHook = async (req, res) => {
       sig,
       config.STRIPE_WEBHOOK_SECRET,
     );
+    console.log("event " + event);
   } catch (err) {
+    console.log("Webhook signature verification failed:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  if (event.type === "checkout.session.completed") {
+  // Respond immediately to Stripe
+  res.status(200).json({ received: true });
+
+  try {
     const session = event.data.object;
     const userId = session.metadata.userId;
     const orderId = session.metadata.orderId;
-    const serviceProvider = session.metadata.orderId;
+    const serviceProvider =
+      session.metadata.serviceProvider || session.metadata.orderId;
 
-    await PaymentModel.create({
-      userId,
-      orderId,
-      serviceProvider,
-      status: "paid",
-    });
-
-    return res
-      .status(200)
-      .json({ success: true, message: "payment successful!" });
-  } else {
-    const session = event.data.object;
-    const userId = session.metadata.userId;
-    const orderId = session.metadata.orderId;
-    const serviceProvider = session.metadata.orderId;
-
-    await PaymentModel.create({
-      userId,
-      orderId,
-      serviceProvider,
-      status: "unpaid",
-    });
-    return res.status(200).json({ success: true, message: "payment failed!" });
+    if (event.type === "checkout.session.completed") {
+      await PaymentModel.create({
+        userId,
+        orderId,
+        serviceProvider,
+        status: "paid",
+      });
+      console.log("Payment successful!");
+    } else {
+      await PaymentModel.create({
+        userId,
+        orderId,
+        serviceProvider,
+        status: "unpaid",
+      });
+      console.log("Payment failed!");
+    }
+  } catch (err) {
+    console.error("Error processing webhook:", err);
   }
 };
