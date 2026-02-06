@@ -7,13 +7,24 @@ import cookieParser from "cookie-parser";
 import arcjet from "./middleware/arcjet.middleware.js";
 import workflowRouter from "./resources/workflow/workflow.routes.js";
 import { stripHook } from "./stripe/stripe.controller.js";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 const app = express();
+
+// path
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // MIDDLEWARE
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(arcjet);
+app.use(
+  "/static_files",
+  express.static(path.join(__dirname, "../public/static_files")),
+);
 
 // HOME ROUTE
 app.get("/", (req, res) => {
@@ -21,7 +32,6 @@ app.get("/", (req, res) => {
 });
 
 // ROUTES
-
 app.use("/api/v1/auth", AuthRoutes);
 app.use("/api/v1/users", UserRoutes);
 app.use("/api/v1/subscriptions", SubscriptionRoutes);
