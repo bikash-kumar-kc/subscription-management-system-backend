@@ -26,9 +26,11 @@ export const sendMoneyRefundEmail = async ({
     html,
   };
 
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) return console.log(error, "Error sending email for refund!!!");
-
-    console.log("Email send: " + info.response);
-  });
+  try {
+    await transporter.sendMail(mailOptions);
+    return true;
+  } catch (error) {
+    console.log("failed to return money to user's subscription!!!" + error);
+    return false;
+  }
 };

@@ -152,9 +152,17 @@ export const cancelSubscription = async (req, res, next) => {
   session.startTransaction();
 
   try {
+    const user = await Usermodel.findById(req.user.id)
+      .select("-password")
+      .session(session);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found!!!" });
+    }
     const subscriptionId = req.params.id;
-    if (!subscriptionId) {
-      throw new Error("Subscription id is required!!!");
+    if (!subscriptionId || !mongoose.Types.ObjectId.isValid(subscriptionId)) {
+      throw new Error("SubscriptionId is either not present or invalid!!!");
     }
 
     const subscription = await Subscription.findById(subscriptionId)
@@ -166,9 +174,16 @@ export const cancelSubscription = async (req, res, next) => {
       subscription.status === "paused" ||
       subscription.status === "expired";
     if (!subscription || isValidSubscription) {
-      throw new Error("Subscription cannot canceled!!!");
+      throw new Error("Subscription cannot be canceled!!!");
     }
-    if (subscription.user.toString() !== req.user.id) {
+
+    console.log("-------------sub. user----------");
+    console.log(subscription.user);
+    console.log(typeof subscription.user);
+    console.log("-------------user----------");
+    console.log(user._id);
+    console.log(typeof user._id);
+    if (subscription.user._id.toString() !== user._id.toString()) {
       await session.abortTransaction();
       return res.status(403).json({ success: false, message: "FORBIDDEN!!!" });
     }
@@ -176,7 +191,7 @@ export const cancelSubscription = async (req, res, next) => {
     const canCanceled = await subscription.canCancel();
 
     if (!canCanceled) {
-      throw new Error("Subscription can not canceled !!!");
+      throw new Error("Subscription can not be canceled !!!");
     }
 
     const { reason, feedBack } = req.body;
@@ -188,7 +203,7 @@ export const cancelSubscription = async (req, res, next) => {
           serviceName: subscription.package_Name,
           reason,
           feedBack,
-          user: req.user.id,
+          user: user._id,
         },
       ],
       { session },
@@ -199,7 +214,7 @@ export const cancelSubscription = async (req, res, next) => {
     }
 
     const refundCalculation = moneyToRefund(subscription.price);
-    const { refundAmount } = refundCalculation;
+    const { refundAmount, refundPercentage } = refundCalculation;
 
     // email that confirm that money is refunded ...
     const isRefundSuccessed = await sendMoneyRefundEmail({
@@ -269,7 +284,8 @@ export const cancelSubscription = async (req, res, next) => {
       message: "Subscription cancelled !",
       data: {
         id: subscription._id,
-        moneyToRefund: refundAmount,
+        moneyToRefund: "$"+refundAmount+"cent",
+        refundPercentage,
       },
     });
   } catch (err) {

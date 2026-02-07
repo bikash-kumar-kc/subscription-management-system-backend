@@ -1,5 +1,6 @@
 import express from "express";
 import {
+  cancelSubscription,
   createSubscription,
   getUserSubscriptions,
 } from "./subscription.controller.js";
@@ -16,9 +17,7 @@ SubscriptionRoutes.delete("/:id", async (req, res) =>
 );
 
 SubscriptionRoutes.get("/user/:id", authenticate, getUserSubscriptions);
-SubscriptionRoutes.put("/user/cancel/:id", async (req, res) =>
-  res.send({ message: "Cancel a subscription" }),
-);
+SubscriptionRoutes.put("/user/cancel/:id", authenticate,cancelSubscription);
 SubscriptionRoutes.get("/upcomming-renewals", async (req, res) =>
   res.send({ message: "Get all upcomming renewels" }),
 );

@@ -20,10 +20,13 @@ export const sendSubscriptionCancelledMail = async ({
     html,
   };
 
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error)
-      return console.log(error, "Error sending email for cancellation!!!");
-
-    console.log("Email send: " + info.response);
-  });
+  try {
+    await transporter.sendMail(mailOptions);
+    return true;
+  } catch (error) {
+    console.log(
+      "Failed to send email regardaing subscription cancel!!!" + error,
+    );
+    return false;
+  }
 };

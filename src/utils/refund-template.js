@@ -15,7 +15,7 @@ export const generateRefundTemplate = ({
 
     <p style="text-align:center; color:#555; font-size:16px; line-height:1.5;">
       Hello <strong>${refundTo}</strong>, this email is to confirm that you have successfully received 
-      <strong>${refundAmount}</strong> for the cancellation of 
+      <strong>$${refundAmount} cent</strong> for the cancellation of 
       <strong>${serviceName}</strong> provided by 
       <strong>${serviceProvider}</strong>.
     </p>
