@@ -1,4 +1,5 @@
 import { config } from "../config/config.js";
+import calculateRePurchasePrice from "../utils/re-purchase.js";
 import stripe from "./client.js";
 
 const stripePaymentProcess = async ({
@@ -8,8 +9,23 @@ const stripePaymentProcess = async ({
   userId,
   orderId,
   serviceProvider,
+  status,
+  frequency,
+  subscriptionId,
 }) => {
   try {
+    let newRepurchaseAmount;
+    let discount_rate;
+    let isStatus = status === "expired" || status === "cancel";
+console.log("item",item)
+    if (isStatus) {
+      const { newRepurchasePrice, discountRate } = calculateRePurchasePrice(
+        item.price
+      );
+      newRepurchaseAmount = newRepurchasePrice;
+      discount_rate = discountRate;
+    };
+
     const session = await stripe.checkout.sessions.create({
       payment_method_types: [paymentMethod || "card"],
       mode,
@@ -20,9 +36,9 @@ const stripePaymentProcess = async ({
             product_data: {
               name: item.name,
             },
-            unit_amount: item.amount || 1,
+            unit_amount: isStatus ? newRepurchaseAmount : item.amount,
             recurring: {
-              interval: "month",
+              interval: frequency || "month",
             },
           },
           quantity: item.quantity,
@@ -31,9 +47,12 @@ const stripePaymentProcess = async ({
       success_url: config.SUCCESS_URL,
       cancel_url: config.UNSUCCESS_URL,
       metadata: {
-        userId,
-        orderId,
-        serviceProvider,
+        userId:userId,
+        orderId:orderId,
+        serviceProvider:serviceProvider,
+        productStatus: status,
+        discount_rate:String(discount_rate),
+        subscriptionId,
       },
     });
 

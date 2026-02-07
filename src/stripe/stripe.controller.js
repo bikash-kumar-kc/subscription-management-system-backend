@@ -5,17 +5,22 @@ import UserModel from "../resources/userResources/user.model.js";
 import stripePaymentProcess from "./stripe.js";
 import stripe from "./client.js";
 import PaymentModel from "../resources/payment/payment.model.js";
+import Subscription from "../resources/subscriptionResources/subscription.model.js";
 
 export const paymentInitiator = async (req, res, next) => {
   try {
     const {
       productId,
+      subscriptionId,
       serviceProvider,
       paymentMethod = "card",
       currency = "usd",
       quantity = 1,
       mode,
+      status = undefined,
+      frequency,
     } = req.body;
+
     if (
       !productId ||
       !mongoose.Types.ObjectId.isValid(productId) ||
@@ -28,6 +33,7 @@ export const paymentInitiator = async (req, res, next) => {
     }
 
     const user = await UserModel.findById(req.user.id);
+    console.log("user",user)
     if (!user) {
       return res
         .status(404)
@@ -35,11 +41,37 @@ export const paymentInitiator = async (req, res, next) => {
     }
 
     const product = await ProductModel.findById(productId);
+    console.log("product"+product)
+
+    if (subscriptionId) {
+      if (!mongoose.Types.ObjectId.isValid(subscriptionId)) {
+        return res.status(400).json({
+          success: false,
+          message: "Either subcripton Id missing or invalid !!!",
+        });
+      }
+
+      const subscription = await Subscription.findById(subscriptionId);
+      if (
+        !subscription ||
+        // subscription.status !== "expired" ||
+        subscription.status !== "cancel" 
+      ) {
+        throw new Error("Subscription can not be repurchased");
+      }
+
+       if (subscription.user._id.toString() !== user._id.toString()) {
+      return res.status(403).json({ success: false, message: "FORBIDDEN!!!" });
+    }
+    }
+
     const paymentData = {
       currency,
       quantity,
-      amount: product.price,
+      amount: Number(product.price),
       name: product.serviceName,
+      frequency,
+      price:Number(product.price)
     };
     const url = await stripePaymentProcess({
       item: paymentData,
@@ -47,6 +79,9 @@ export const paymentInitiator = async (req, res, next) => {
       mode,
       userId: user._id.toString(),
       orderId: product._id.toString(),
+      status,
+      serviceProvider,
+      subscriptionId,
     });
 
     if (!url) {
@@ -73,7 +108,6 @@ export const paymentInitiator = async (req, res, next) => {
 };
 
 export const stripHook = async (req, res) => {
-  console.log("-------------------here----------------");
   let event;
   const sig = req.headers["stripe-signature"];
 
@@ -98,13 +132,21 @@ export const stripHook = async (req, res) => {
     const orderId = session.metadata.orderId;
     const serviceProvider =
       session.metadata.serviceProvider || session.metadata.orderId;
+    const productStatus = session.metadata.productStatus;
+    const discount_rate = session.metadata.discount_rate;
+    const subscriptionId =session.metadata.subscriptionId;
+console.log("session.metadata",session.metadata)
+    console.log(userId,orderId,serviceProvider,productStatus,discount_rate)
 
-    if (event.type === "checkout.session.completed") {
+    if (event.type === "checkout.session.completed") { 
       await PaymentModel.create({
         userId,
         orderId,
         serviceProvider,
+        productStatus,
+        discountRate: Number(discount_rate),
         status: "paid",
+        subscriptionId,
       });
       console.log("Payment successful!");
     } else {

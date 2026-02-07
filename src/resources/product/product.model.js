@@ -14,7 +14,7 @@ const ProductSchema = new mongoose.Schema(
       minLength: [3, "Service provider must contain characters greater than 3"],
     },
     price: {
-      type: String,
+      type: Number,
       trim: true,
       min: [0.01, "Invalid price"],
     },

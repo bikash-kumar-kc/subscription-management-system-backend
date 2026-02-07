@@ -177,12 +177,6 @@ export const cancelSubscription = async (req, res, next) => {
       throw new Error("Subscription cannot be canceled!!!");
     }
 
-    console.log("-------------sub. user----------");
-    console.log(subscription.user);
-    console.log(typeof subscription.user);
-    console.log("-------------user----------");
-    console.log(user._id);
-    console.log(typeof user._id);
     if (subscription.user._id.toString() !== user._id.toString()) {
       await session.abortTransaction();
       return res.status(403).json({ success: false, message: "FORBIDDEN!!!" });
@@ -284,7 +278,7 @@ export const cancelSubscription = async (req, res, next) => {
       message: "Subscription cancelled !",
       data: {
         id: subscription._id,
-        moneyToRefund: "$"+refundAmount+"cent",
+        moneyToRefund: "$" + refundAmount + "cent",
         refundPercentage,
       },
     });
@@ -491,11 +485,17 @@ export const resumeSubscription = async (req, res, next) => {
   }
 };
 
-// todo---
 export const repurchaseSubscription = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
+    const user = await Usermodel.findById(req.user.id);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found!!!" });
+    }
+
     const subscriptionId = req.params.id;
     if (!subscriptionId || !mongoose.Types.ObjectId.isValid(subscriptionId)) {
       await session.abortTransaction();
@@ -504,25 +504,37 @@ export const repurchaseSubscription = async (req, res, next) => {
         message: "Either subcripton Id missing or invalid !!!",
       });
     }
+
+
+    const product = await PaymentModel.find({
+      subscriptionId: subscriptionId,
+      $or: [{ productStatus: "cancel" }, { productStatus: "expired" }],
+    }).session(session);
+
+
+    if (product[0].status !== "paid") {
+      return res.status(400).json({ success: false, message: "PAYMENT_ISSUE" });
+    }
+
     const subscription = await Subscription.findById(subscriptionId)
       .populate("user", "name email")
       .session(session);
 
     if (
       !subscription ||
-      subscription.status !== "expired" ||
-      subscription.status !== "cancel"
+      !(subscription.status == "expired" && subscription.status == "cancel")
     ) {
+
       await session.abortTransaction();
       throw new Error("Subscription can not be repurchased");
     }
 
-    if (subscription.user.toString() !== req.user.id) {
+    if (subscription.user._id.toString() !== user._id.toString()) {
       await session.abortTransaction();
       return res.status(403).json({ success: false, message: "FORBIDDEN!!!" });
     }
 
-    const repurchased = await subscription.repurchase().session(session);
+    const repurchased = await subscription.repurchase(session);
     if (!repurchased) {
       await session.abortTransaction();
       throw new Error("Problem in repurchasing the subscription!!!");
@@ -608,6 +620,7 @@ export const repurchaseSubscription = async (req, res, next) => {
         : err.message,
       statusCode: err.statusCode || 500,
       stack: isProduction ? undefined : err.stack,
+      err,
     };
 
     next(error);

@@ -214,18 +214,19 @@ SubscriptionSchema.methods.canCancel = function () {
   return daysUsed <= maxCancelableDays;
 };
 
-SubscriptionSchema.methods.repurchase = async function () {
+SubscriptionSchema.methods.repurchase = async function (session = null) {
   this.startDate = new Date();
   this.pauseLimit = limits[this.frequency];
   this.pausesUsed = 0;
   this.pausesRemaining = this.pauseLimit;
   this.isPaused = false;
-  this.pausedAt = null;
-  this.can_renew = true;
+  this.pausedAt = new Date();
+  this.can_renew = false;
+  this.status = "active";
 
-  await this.save();
+  await this.save({ session });
 
-  return this.constructor.findById(this._id);
+  return this.constructor.findById(this._id).session(session);
 };
 
 SubscriptionSchema.methods.can_renew = function () {

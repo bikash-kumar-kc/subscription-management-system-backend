@@ -9,6 +9,13 @@ const PaymentSchema = new mongoose.Schema(
       trim: true,
     },
 
+    subscriptionId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "subscription",
+      required: true,
+      trim: true,
+    },
+
     userId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "user",
@@ -27,6 +34,15 @@ const PaymentSchema = new mongoose.Schema(
       enum: ["paid", "unpaid"],
       default: "unpaid",
       required: true,
+    },
+    productStatus: {
+      type: String,
+    },
+
+    discountRate: {
+      type: Number,
+      default: 0,
+      min: [0, "Discount rate must be equal or greater than 0"],
     },
   },
   { timestamps: true },

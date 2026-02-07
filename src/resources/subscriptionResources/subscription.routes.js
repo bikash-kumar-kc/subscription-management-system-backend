@@ -3,6 +3,7 @@ import {
   cancelSubscription,
   createSubscription,
   getUserSubscriptions,
+  repurchaseSubscription,
 } from "./subscription.controller.js";
 import authenticate from "../../middleware/authenticate.js";
 
@@ -21,6 +22,8 @@ SubscriptionRoutes.put("/user/cancel/:id", authenticate,cancelSubscription);
 SubscriptionRoutes.get("/upcomming-renewals", async (req, res) =>
   res.send({ message: "Get all upcomming renewels" }),
 );
+
+SubscriptionRoutes.put("/repurchase/:id",authenticate,repurchaseSubscription)
 
 SubscriptionRoutes.get("/:id", async (req, res) =>
   res.send({ message: "Get a subscription" }),

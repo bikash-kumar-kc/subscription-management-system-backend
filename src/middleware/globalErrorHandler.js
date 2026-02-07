@@ -28,6 +28,7 @@ const globalErrorHandler = (err, req, res,next) => {
     error: error.message,
     err_stack: error.stack,
     errors: error.errors || "undefined",
+    err:error.err
   });
   } catch (error) {
     next(error)

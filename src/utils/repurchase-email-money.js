@@ -27,14 +27,13 @@ export const sendEmailForRepurchaseConfirmationMoney = async ({
     html,
   };
 
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error)
-      return console.log(
-        error,
-        "Error sending email for repurchase payment!!!",
-      );
 
-    console.log("Email send: " + info.response);
+  try {
+    await transporter.sendMail(mailOptions)
     return true;
-  });
+  } catch (err) {
+    console.log("failed to send email for payment confirmation!!!"+err)
+    return false;
+  }
+  
 };
