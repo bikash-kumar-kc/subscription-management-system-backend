@@ -119,16 +119,23 @@ export const createSubscription = async (req, res, next) => {
 
 export const getUserSubscriptions = async (req, res, next) => {
   try {
-    if (req.user._id.toString() !== req.params.id) {
+    const user = await Usermodel.findById(req.user._id);
+    if (req.user._id.toString() !== user._id.toString()) {
       return res.status(403).json({ success: false, message: "FORBIDDEN" });
     }
+    if (!user)
+      return res
+        .status(404)
+        .json({ success: false, message: "USER NOT FOUND!!!" });
 
-    const userSubscription = await Subscription.find({ user: req.params.id });
+    const userSubscription = await Subscription.find({ user: user._id });
 
     return res.status(200).json({
       success: true,
+      message: "All Subscriptions",
       data: {
         subscription: userSubscription,
+        totalSubscription: userSubscription.length,
       },
     });
   } catch (err) {

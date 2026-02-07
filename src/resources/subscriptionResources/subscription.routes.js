@@ -1,20 +1,21 @@
 import express from "express";
-import { createSubscription, getUserSubscriptions } from "./subscription.controller.js";
+import {
+  createSubscription,
+  getUserSubscriptions,
+} from "./subscription.controller.js";
 import authenticate from "../../middleware/authenticate.js";
 
 const SubscriptionRoutes = express.Router();
 
-SubscriptionRoutes.get("/", async (req, res) =>
-  res.send({ message: "Get all subscriptions" }),
-);
+SubscriptionRoutes.get("/", authenticate, getUserSubscriptions);
 
-SubscriptionRoutes.post("/",authenticate, createSubscription);
+SubscriptionRoutes.post("/", authenticate, createSubscription);
 
 SubscriptionRoutes.delete("/:id", async (req, res) =>
   res.send({ message: "Delete a subscription" }),
 );
 
-SubscriptionRoutes.get("/user/:id",authenticate,getUserSubscriptions);
+SubscriptionRoutes.get("/user/:id", authenticate, getUserSubscriptions);
 SubscriptionRoutes.put("/user/cancel/:id", async (req, res) =>
   res.send({ message: "Cancel a subscription" }),
 );
