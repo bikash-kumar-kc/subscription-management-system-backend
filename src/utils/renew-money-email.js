@@ -26,14 +26,11 @@ export const sendEmailForSubscriptionRenewMoney = async ({
     html,
   };
 
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error)
-      return console.log(
-        error,
-        "Error sending email for renew confirmation money!!!",
-      );
-
-    console.log("Email send: " + info.response);
+  try {
+    await transporter.sendMail(mailOptions);
     return true;
-  });
+  } catch (err) {
+    console.log("Failed to send renew payment confirmation!!!" + err);
+    return false;
+  }
 };

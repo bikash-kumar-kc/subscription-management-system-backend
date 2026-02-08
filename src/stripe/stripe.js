@@ -1,5 +1,6 @@
 import { config } from "../config/config.js";
 import calculateRePurchasePrice from "../utils/re-purchase.js";
+import calculateNewPrice from "../utils/renew.js";
 import stripe from "./client.js";
 
 const stripePaymentProcess = async ({
@@ -14,17 +15,34 @@ const stripePaymentProcess = async ({
   subscriptionId,
 }) => {
   try {
-    let newRepurchaseAmount;
-    let discount_rate;
+    let newRepurchaseAmount, renewPrice, renewDiscountPercent, discount_rate;
     let isStatus = status === "expired" || status === "cancel";
-console.log("item",item)
+    let isStatusActive = status === "active";
+    console.log("isStatus",isStatus);
+    console.log("isStatusActive",isStatusActive)
+
     if (isStatus) {
       const { newRepurchasePrice, discountRate } = calculateRePurchasePrice(
-        item.price
+        item.price,
       );
       newRepurchaseAmount = newRepurchasePrice;
       discount_rate = discountRate;
-    };
+    }
+
+    if (isStatusActive) {
+      const { price, discountPercent } = calculateNewPrice(
+        item.price,
+        item.renewalDate,
+      );
+      renewPrice = price;
+      renewDiscountPercent = discountPercent;
+      console.log("price",price);
+      console.log("renewDiscountPercent",renewDiscountPercent);
+      console.log("-----------------status is active---------------")
+    }
+
+    const dis=discount_rate || renewDiscountPercent;
+    console.log("dis",dis)
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: [paymentMethod || "card"],
@@ -36,7 +54,12 @@ console.log("item",item)
             product_data: {
               name: item.name,
             },
-            unit_amount: isStatus ? newRepurchaseAmount : item.amount,
+            unit_amount:
+              isStatus || isStatusActive
+                ? isStatus
+                  ? newRepurchaseAmount
+                  : renewPrice
+                : item.amount,
             recurring: {
               interval: frequency || "month",
             },
@@ -47,11 +70,11 @@ console.log("item",item)
       success_url: config.SUCCESS_URL,
       cancel_url: config.UNSUCCESS_URL,
       metadata: {
-        userId:userId,
-        orderId:orderId,
-        serviceProvider:serviceProvider,
+        userId: userId,
+        orderId: orderId,
+        serviceProvider: serviceProvider,
         productStatus: status,
-        discount_rate:String(discount_rate),
+        discount_rate: String(dis),
         subscriptionId,
       },
     });

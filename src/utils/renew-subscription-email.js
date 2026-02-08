@@ -1,8 +1,6 @@
 import { accountMail, transporter } from "../nodemailer/nodemailer.js";
 import { generateRenewSubscriptionTemplate } from "./renew-subscription-template.js";
 
-
-
 export const sendEmailForSubscriptionRenew = async ({
   serviceProvider,
   serviceName,
@@ -30,14 +28,11 @@ export const sendEmailForSubscriptionRenew = async ({
     html,
   };
 
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error)
-      return console.log(
-        error,
-        "Error sending email for renew confirmation!!!",
-      );
-
-    console.log("Email send: " + info.response);
+  try {
+    await transporter.sendMail(mailOptions);
     return true;
-  });
+  } catch (err) {
+    console.log("Failed to send email confirmation for renew !!!" + err);
+    return false;
+  }
 };

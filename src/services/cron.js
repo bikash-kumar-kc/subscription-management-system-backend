@@ -33,6 +33,7 @@ const startCronJobs = new CronJob(
           },
         },
       ],
+      { updatePipeline: true }
     );
 
     console.log(`Marked ${result_1.modifiedCount} Subscription as expired`);

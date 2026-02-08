@@ -37,6 +37,7 @@ const PaymentSchema = new mongoose.Schema(
     },
     productStatus: {
       type: String,
+      required:true,
     },
 
     discountRate: {

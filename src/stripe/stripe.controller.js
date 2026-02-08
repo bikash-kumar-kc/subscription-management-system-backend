@@ -33,7 +33,6 @@ export const paymentInitiator = async (req, res, next) => {
     }
 
     const user = await UserModel.findById(req.user.id);
-    console.log("user",user)
     if (!user) {
       return res
         .status(404)
@@ -41,7 +40,6 @@ export const paymentInitiator = async (req, res, next) => {
     }
 
     const product = await ProductModel.findById(productId);
-    console.log("product"+product)
 
     if (subscriptionId) {
       if (!mongoose.Types.ObjectId.isValid(subscriptionId)) {
@@ -52,17 +50,23 @@ export const paymentInitiator = async (req, res, next) => {
       }
 
       const subscription = await Subscription.findById(subscriptionId);
-      if (
-        !subscription ||
-        // subscription.status !== "expired" ||
-        subscription.status !== "cancel" 
-      ) {
-        throw new Error("Subscription can not be repurchased");
+      const isValid =
+        subscription.status == "expired" ||
+        subscription.status == "cancel" ||
+        subscription.status == "active";
+
+        console.log("isValid:: ",isValid);
+        console.log("can renew:: ",subscription.can_renew())
+      
+      if (!subscription || !isValid || !subscription.can_renew()) {
+        throw new Error("Subscription can not be repurchased or renew");
       }
 
-       if (subscription.user._id.toString() !== user._id.toString()) {
-      return res.status(403).json({ success: false, message: "FORBIDDEN!!!" });
-    }
+      if (subscription.user._id.toString() !== user._id.toString()) {
+        return res
+          .status(403)
+          .json({ success: false, message: "FORBIDDEN!!!" });
+      }
     }
 
     const paymentData = {
@@ -71,7 +75,7 @@ export const paymentInitiator = async (req, res, next) => {
       amount: Number(product.price),
       name: product.serviceName,
       frequency,
-      price:Number(product.price)
+      price: Number(product.price),
     };
     const url = await stripePaymentProcess({
       item: paymentData,
@@ -79,7 +83,7 @@ export const paymentInitiator = async (req, res, next) => {
       mode,
       userId: user._id.toString(),
       orderId: product._id.toString(),
-      status,
+      status: status,
       serviceProvider,
       subscriptionId,
     });
@@ -117,7 +121,6 @@ export const stripHook = async (req, res) => {
       sig,
       config.STRIPE_WEBHOOK_SECRET,
     );
-    console.log("event " + event);
   } catch (err) {
     console.log("Webhook signature verification failed:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -134,11 +137,15 @@ export const stripHook = async (req, res) => {
       session.metadata.serviceProvider || session.metadata.orderId;
     const productStatus = session.metadata.productStatus;
     const discount_rate = session.metadata.discount_rate;
-    const subscriptionId =session.metadata.subscriptionId;
-console.log("session.metadata",session.metadata)
-    console.log(userId,orderId,serviceProvider,productStatus,discount_rate)
+    const subscriptionId = session.metadata.subscriptionId;
+    console.log("productStatus",productStatus);
+    console.log('discount_rate',discount_rate);
+    console.log("subscriptionId",subscriptionId);
+    console.log("userId",userId);
+    console.log("orderId",orderId);
+    console.log("serviceProvider",serviceProvider);
 
-    if (event.type === "checkout.session.completed") { 
+    if (event.type === "checkout.session.completed") {
       await PaymentModel.create({
         userId,
         orderId,
