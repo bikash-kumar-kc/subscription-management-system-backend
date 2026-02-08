@@ -21,6 +21,7 @@ import ProductModel from "../product/product.model.js";
 import PaymentModel from "../payment/payment.model.js";
 import { sendEmailForSubcriptionCreated } from "../../utils/subscription-created-email.js";
 
+// checked
 export const createSubscription = async (req, res, next) => {
   const {
     productId,
@@ -117,6 +118,7 @@ export const createSubscription = async (req, res, next) => {
   }
 };
 
+//checked
 export const getUserSubscriptions = async (req, res, next) => {
   try {
     const user = await Usermodel.findById(req.user._id);
@@ -147,6 +149,7 @@ export const getUserSubscriptions = async (req, res, next) => {
   }
 };
 
+//checked
 export const cancelSubscription = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -298,14 +301,20 @@ export const cancelSubscription = async (req, res, next) => {
   }
 };
 
+//checked
 export const pauseSubscription = async (req, res, next) => {
   const session = await mongoose.startSession();
-
   session.startTransaction();
 
   try {
+    const user = await Usermodel.findById(req.user.id).session(session);
+    if (!user) {
+      await session.abortTransaction();
+      return res
+        .status(400)
+        .json({ success: false, message: "User not Found!!!" });
+    }
     const subscriptionId = req.params.id;
-
     if (!subscriptionId || !mongoose.Types.ObjectId.isValid(subscriptionId)) {
       await session.abortTransaction();
       return res.status(400).json({
@@ -313,20 +322,28 @@ export const pauseSubscription = async (req, res, next) => {
         message: "Either no subscriptionId or invalid!!!",
       });
     }
+
     const subscription = await Subscription.findById(subscriptionId)
       .populate("user", "name email")
       .session(session);
-    if (!subscription || !subscription.canPause()) {
+
+    if (
+      !subscription ||
+      !subscription.canPause() ||
+      subscription.status === "cancel" ||
+      subscription.status === "expired"
+    ) {
       await session.abortTransaction();
+      console.log("--------here--------------");
       throw new Error("Subscription can not be paused");
     }
 
-    if (subscription.user.toString() !== req.user.id) {
+    if (subscription.user._id.toString() !== user._id.toString()) {
       return res.status(403).json({ success: false, message: "FORBIDDEN" });
     }
 
-    const pauseSub = await subscription.paused().session(session);
-
+    const pauseSub = await subscription.paused(session);
+    console.log("pauseSub", pauseSub);
     if (!pauseSub) {
       await session.abortTransaction();
       throw new Error("Failed to paushed the subscription!!!");
@@ -375,6 +392,7 @@ export const pauseSubscription = async (req, res, next) => {
       message: isProduction ? "Problem in paushing subscription" : err.message,
       statusCode: err.statusCode || 500,
       stack: isProduction ? undefined : err.stack,
+      err,
     };
 
     next(error);
@@ -383,10 +401,19 @@ export const pauseSubscription = async (req, res, next) => {
   }
 };
 
+//checked
 export const resumeSubscription = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
   try {
+    const user = await Usermodel.findById(req.user.id);
+    if (!user) {
+      await session.abortTransaction();
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found!!!" });
+    }
+
     const subscriptionId = req.params.id;
     if (!subscriptionId || !mongoose.Types.ObjectId.isValid(subscriptionId)) {
       await session.abortTransaction();
@@ -404,12 +431,12 @@ export const resumeSubscription = async (req, res, next) => {
       throw new Error("Subscription can not resumed!!!");
     }
 
-    if (subscription.user.toString() !== req.user.id) {
+    if (subscription.user._id.toString() !== user._id.toString()) {
       await session.abortTransaction();
       return res.status(403).json({ success: false, message: "FORBIDDEN!!!" });
     }
 
-    const resumeSub = await subscription.resume().session(session);
+    const resumeSub = await subscription.resume(session);
 
     if (!resumeSub) {
       await session.abortTransaction();
@@ -485,6 +512,7 @@ export const resumeSubscription = async (req, res, next) => {
   }
 };
 
+//checked
 export const repurchaseSubscription = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -626,7 +654,6 @@ export const repurchaseSubscription = async (req, res, next) => {
   }
 };
 
-// todo---
 export const renewSubscription = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -651,8 +678,7 @@ export const renewSubscription = async (req, res, next) => {
       productStatus: "active",
     }).session(session);
 
-
-    console.log("product",product)
+    console.log("product", product);
 
     if (product[0].status !== "paid") {
       return res.status(400).json({ success: false, message: "PAYMENT_ISSUE" });
@@ -676,7 +702,7 @@ export const renewSubscription = async (req, res, next) => {
       subscription.renewalsDate,
     );
 
-    const oldPrice= subscription.price;
+    const oldPrice = subscription.price;
 
     subscription.price = priceToRenew;
     subscription.status = "active";
@@ -693,8 +719,6 @@ export const renewSubscription = async (req, res, next) => {
     const renewSubscription = await Subscription.findById(
       subscription._id,
     ).session(session);
-
-    
 
     const isPaymentSuccessful = await sendEmailForSubscriptionRenewMoney({
       serviceProvider: subscription.service_provider,

@@ -28,14 +28,13 @@ export const sendEmailForSubscriptionResume = async ({
     html,
   };
 
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error)
-      return console.log(
-        error,
-        "Error sending email for resume confirmation!!!",
-      );
-
-    console.log("Email send: " + info.response);
+  try {
+    await transporter.sendMail(mailOptions);
     return true;
-  });
+  } catch (err) {
+    console.log(
+      "Failed to send email confiramtion for resume subscription!!!" + err,
+    );
+    return false;
+  }
 };

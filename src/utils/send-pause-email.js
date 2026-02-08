@@ -24,16 +24,13 @@ export const sendEmailForSubscriptionPaused = async ({
     html,
   };
 
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error)
-      return console.log(
-        error,
-        "Error sending email for pauses confirmation!!!",
-      );
-
-    console.log("Email send: " + info.response);
-      return true;
-  });
-
-
+  try {
+    await transporter.sendMail(mailOptions);
+    return true;
+  } catch (err) {
+    console.log(
+      "Failed to send email confiramtion for subscription paused!!!" + err,
+    );
+    return false;
+  }
 };

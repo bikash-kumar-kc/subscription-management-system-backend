@@ -167,38 +167,38 @@ SubscriptionSchema.methods.canPause = function () {
   return this.pausesRemaining > 0 && !this.isPaused;
 };
 
-SubscriptionSchema.methods.paused = async function () {
+SubscriptionSchema.methods.paused = async function (session) {
   if (this.canPause()) {
     this.status = "paused";
     this.pausedAt = new Date();
     this.pausesUsed = this.pausesUsed + 1;
+    this.isPaused = true;
     this.pausesRemaining -= 1;
-    await this.save();
+    await this.save({ session });
     // Fetch a fresh copy from the database
-    return this.constructor.findById(this._id);
+    return this;
   }
 
   throw new Error("Cannot pause: No pauses remaining or already paused");
 };
 
-SubscriptionSchema.methods.resume = async function () {
+SubscriptionSchema.methods.resume = async function (session) {
   if (!this.isPaused) {
     throw new Error("Cannot resume : subscription is not paused!!!");
   }
 
-  this.isPaused = false;
   const totalPausedDuration = Math.ceil(
     (new Date() - this.pausedAt) / (1000 * 60 * 60 * 24),
   );
 
   this.renewalsDate.setDate(this.renewalsDate.getDate() + totalPausedDuration);
-
-  this.pausedAt = null;
+  this.isPaused = false;
+  this.pausedAt = new Date();
   this.status = "active";
 
-  await this.save();
+  await this.save({ session });
 
-  return this.constructor.findById(this._id);
+  return this;
 };
 
 SubscriptionSchema.methods.canCancel = function () {
