@@ -1072,6 +1072,7 @@ export const deleteSubscriptions = async (req, res, next) => {
   }
 };
 
+//checked
 export const getUserSubscription = async (req, res, next) => {
   try {
     const user = await Usermodel.findById(req.user.id);

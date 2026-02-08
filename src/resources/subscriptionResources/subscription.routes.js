@@ -18,7 +18,6 @@ import authenticate from "../../middleware/authenticate.js";
 const SubscriptionRoutes = express.Router();
 
 SubscriptionRoutes.get("/", authenticate, getUserSubscriptions);
-
 SubscriptionRoutes.post("/", authenticate, createSubscription);
 SubscriptionRoutes.delete(
   "/deleteSubscriptions",
@@ -26,7 +25,6 @@ SubscriptionRoutes.delete(
   deleteSubscriptions,
 );
 SubscriptionRoutes.delete("/:id", authenticate, deleteSubscription);
-
 SubscriptionRoutes.get("/user/:id", authenticate, getUserSubscriptions);
 SubscriptionRoutes.put("/user/cancel/:id", authenticate, cancelSubscription);
 SubscriptionRoutes.get(
@@ -34,7 +32,6 @@ SubscriptionRoutes.get(
   authenticate,
   upcommingRenewalsSubscriptions,
 );
-
 SubscriptionRoutes.put("/repurchase/:id", authenticate, repurchaseSubscription);
 SubscriptionRoutes.put("/renew/:id", authenticate, renewSubscription);
 SubscriptionRoutes.put("/paush/:id", authenticate, pauseSubscription);
@@ -45,6 +42,6 @@ SubscriptionRoutes.patch(
   cancelSubscriptions,
 );
 
-SubscriptionRoutes.get("/:id", authenticate, getUserSubscription);
+SubscriptionRoutes.get("/:id", authenticate, getUserSubscription); // GET A SUBSCRIPTIONS...
 
 export default SubscriptionRoutes;

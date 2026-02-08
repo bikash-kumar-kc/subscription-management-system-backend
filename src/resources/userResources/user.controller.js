@@ -90,21 +90,22 @@ export const uploadProfile = async (req, res, next) => {
     if (user.imageUrl) {
       try {
         const publicKey = generatePublicKey(user.imageUrl);
+        console.log("publicKey", publicKey);
 
-        if (publicKey) {
-          const isImageDeleted = await deleteFile(publicKey);
+        if (!publicKey) {
+          deletionErrors.push({
+            resource: "profile_image",
+            error: "Unable to extract public key from image URL",
+          });
+        }
 
-          if (!isImageDeleted) {
-            deletionErrors.push({
-              resource: "profile_image",
-              error: "Failed to delete profile image from cloud storage",
-            });
-          } else {
-            deletionErrors.push({
-              resource: "profile_image",
-              error: "Unable to extract public key from image URL",
-            });
-          }
+        const isImageDeleted = await deleteFile(publicKey);
+
+        if (!isImageDeleted) {
+          deletionErrors.push({
+            resource: "profile_image",
+            error: "Failed to delete profile image from cloud storage",
+          });
         }
       } catch (imageErr) {
         console.error("Error deleting profile image:", imageErr);
@@ -114,13 +115,11 @@ export const uploadProfile = async (req, res, next) => {
         });
       }
     }
-
-    const coverImageMimeType = req.files.profileImage.mimetype
-      .split("/")
-      .at(-1);
-    const fileName = req.files.profileImage.name;
-    filePath = path.resolve(__dirname, "../../public/resources", fileName);
-
+    console.log(req.file);
+    const coverImageMimeType = req.file.mimetype.split("/").at(-1);
+    const fileName = req.file.filename;
+    filePath = path.resolve(__dirname, "../../../public/resources", fileName);
+    console.log("filePath", filePath);
     const uploadProfileImage = await uploadFile({
       file: filePath,
       fileName: fileName,
@@ -135,7 +134,7 @@ export const uploadProfile = async (req, res, next) => {
     }
 
     try {
-      await fs.promises.unlink(filePath);
+      await fs.promises.unlink(req.file.path);
     } catch (unlinkErr) {
       console.error("Error deleting temporary file:", unlinkErr);
     }
