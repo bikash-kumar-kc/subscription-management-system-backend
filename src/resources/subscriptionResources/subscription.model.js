@@ -207,9 +207,9 @@ SubscriptionSchema.methods.canCancel = function () {
   const yDays = Math.ceil(
     (new Date(this.renewalsDate) - start) / (1000 * 60 * 60 * 24),
   );
-
   const daysUsed = (now - start) / (1000 * 60 * 60 * 24);
   const maxCancelableDays = yDays * 0.2;
+ 
 
   return daysUsed <= maxCancelableDays;
 };

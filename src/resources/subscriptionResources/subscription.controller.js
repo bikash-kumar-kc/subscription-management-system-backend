@@ -654,6 +654,7 @@ export const repurchaseSubscription = async (req, res, next) => {
   }
 };
 
+//checked
 export const renewSubscription = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
@@ -802,30 +803,34 @@ export const renewSubscription = async (req, res, next) => {
   }
 };
 
+//checked
 export const upcommingRenewalsSubscriptions = async (req, res, next) => {
   try {
     const user = await Usermodel.findById(req.user.id);
 
-    if (!user)
+    if (!user) {
       res.status(404).json({ success: false, message: "User not found !!!" });
+    }
 
     const subscriptions = await Subscription.find({
       canRenew: true,
       user: user._id,
     });
 
-    if (!subscriptions)
-      res.status(200).json({
+    if (!subscriptions || !subscriptions.length > 0) {
+      return res.status(200).json({
         success: true,
         message: "No subscription for renewels!!!",
         data: { subscriptions: [] },
       });
+    }
 
     return res.status(200).json({
       success: true,
       message: "Got Subscriptions!",
       data: {
         subscriptions,
+        totalSubscription: subscriptions.length,
       },
     });
   } catch (err) {
@@ -840,12 +845,15 @@ export const upcommingRenewalsSubscriptions = async (req, res, next) => {
   }
 };
 
+//checked...
 export const cancelSubscriptions = async (req, res, next) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const user = await Usermodel.findById(req.user.id).session(session);
+    const user = await Usermodel.findById(req.user.id)
+      .select("-password")
+      .session(session);
 
     if (!user) {
       await session.abortTransaction();
@@ -854,25 +862,34 @@ export const cancelSubscriptions = async (req, res, next) => {
 
     const allSubscriptions = await Subscription.find({
       status: "active",
-      user: req.user.id,
+      user: user._id,
     }).session(session);
 
-    if (!allSubscriptions) await session.abortTransaction();
-    res.status(200).message({
-      success: false,
-      message: "No subscription can cancelled!!!",
-      data: {
-        cancelSubscriptions: [{}],
-        totalSubscriptionCancelled: 0,
-      },
-    });
+    if (!allSubscriptions) {
+      await session.abortTransaction();
+      return res.status(200).message({
+        success: false,
+        message: "No subscription can cancelled!!!",
+        data: {
+          cancelSubscriptions: [{}],
+          totalSubscriptionCancelled: 0,
+        },
+      });
+    }
 
-    const cancelableSubscriptions = allSubscriptions.filter(
-      (eachSubscription) => eachSubscription.canCancel(),
+    const results = await Promise.all(
+      allSubscriptions.map((sub) => sub.canCancel()),
     );
 
-    const successfulCancels = [{}];
-    const unsuccessfulCancels = [{}];
+    const cancelableSubscriptions = allSubscriptions.filter(
+      (_, index) => results[index],
+    );
+
+    console.log("allSubscriptions", allSubscriptions);
+    console.log("cancelableSubscriptions", cancelableSubscriptions);
+
+    const successfulCancels = [];
+    const unsuccessfulCancels = [];
 
     for (const sub of cancelableSubscriptions) {
       const isCancelled = await Subscription.updateOne(
@@ -891,14 +908,15 @@ export const cancelSubscriptions = async (req, res, next) => {
       );
 
       if (isCancelled) {
-        const costToReturn = moneyToRefund(sub.price);
+        const { refundAmount, refundPercentage } = moneyToRefund(sub.price);
         successfulCancels.push({
           serviceProvider: sub.service_provider,
           serviceName: sub.package_Name,
           price: sub.price,
-          returnAmount: costToReturn,
+          returnAmount: refundAmount,
+          discountPercentage: refundPercentage,
           totalDaysServiceUsed: Math.ceil(
-            (new Date(this.renewalsDate) - new Date(this.startDate)) /
+            (new Date(sub.renewalsDate) - new Date(sub.startDate)) /
               (1000 * 60 * 60 * 24),
           ),
         });
@@ -919,10 +937,12 @@ export const cancelSubscriptions = async (req, res, next) => {
     });
 
     if (!isEmailSent) {
+      await session.abortTransaction();
       console.log("Failed to send mass cancellation email!!");
       // no record for it...
     }
 
+    await session.commitTransaction();
     return res.status(200).json({
       success: true,
       message: "Successfully cancelled subscription!!!",
@@ -934,6 +954,7 @@ export const cancelSubscriptions = async (req, res, next) => {
       },
     });
   } catch (err) {
+    await session.abortTransaction();
     const isProduction = config.NODE_ENV === "production" ? true : false;
     const error = {
       message: isProduction
@@ -944,26 +965,48 @@ export const cancelSubscriptions = async (req, res, next) => {
     };
 
     next(error);
+  } finally {
+    await session.endSession();
   }
 };
 
+//checked
 export const deleteSubscription = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
+    const user = await Usermodel.findById(req.user.id).session(session);
+    if (!user) {
+      await session.abortTransaction();
+      return res
+        .status(404)
+        .json({ success: false, message: "USER NOT FOUND!!!" });
+    }
     const subscriptionId = req.params.id;
-    if (!subscriptionId) throw new Error("Subscription Id is required!!!");
+    if (!subscriptionId || !mongoose.Types.ObjectId.isValid(subscriptionId)) {
+      await session.abortTransaction();
+      throw new Error("Subscription Id is required!!!");
+    }
 
-    const subscription = await Subscription.findById(subscriptionId);
+    const subscription =
+      await Subscription.findById(subscriptionId).session(session);
 
-    if (subscription.user.toString() !== req.user.id)
-      res.status(403).json({ success: false, message: "FORBIDDEN!!!" });
+    if (subscription.user._id.toString() !== user._id.toString()) {
+      await session.abortTransaction();
+      return res.status(403).json({ success: false, message: "FORBIDDEN!!!" });
+    }
 
-    if (subscription.status != "cancel" || subscription.status != "expired")
+    if (subscription.status !== "cancel" || subscription.status !== "expired")
       throw new Error("Subscription can not delete!!!");
 
-    const isDeleted = await Subscription.deleteOne({ _id: subscriptionId });
+    const isDeleted = await Subscription.deleteOne({
+      _id: subscriptionId,
+    }).session(session);
 
     if (!isDeleted) throw new Error("Problem in deleting Subscription!!!");
 
+    await session.commitTransaction();
     return res.status(200).json({
       success: true,
       message: "Delete Successfully!",
@@ -972,6 +1015,7 @@ export const deleteSubscription = async (req, res, next) => {
       },
     });
   } catch (err) {
+    await session.abortTransaction();
     const isProduction = config.NODE_ENV === "production" ? true : false;
     const error = {
       message: isProduction ? "Problem in delete subscription" : err.message,
@@ -980,21 +1024,32 @@ export const deleteSubscription = async (req, res, next) => {
     };
 
     next(error);
+  } finally {
+    await session.endSession();
   }
 };
 
+//checked
 export const deleteSubscriptions = async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
   try {
-    const user = await Usermodel.findById(req.user.id);
-    if (!user)
+    const user = await Usermodel.findById(req.user.id).session(session);
+    if (!user) {
+      await session.abortTransaction();
       return res
         .status(404)
         .json({ success: false, message: "User not found!!!" });
+    }
 
     const isDeleted = await Subscription.deleteMany({
-      user: req.user.id,
+      user: user._id,
       status: { $in: ["expired", "cancel"] },
-    });
+    }).session(session);
+
+    console.log("isDeleted", isDeleted);
+    await session.commitTransaction();
     return res.status(200).json({
       success: true,
       messasge: "Deletes Successfully!",
@@ -1003,11 +1058,55 @@ export const deleteSubscriptions = async (req, res, next) => {
       },
     });
   } catch (err) {
+    await session.abortTransaction();
     const isProduction = config.NODE_ENV === "production" ? true : false;
     const error = {
       message: isProduction ? "Problem in delete subscriptions" : err.message,
       statusCode: err.statusCode || 500,
-      stack: isProduction ? err.stack : undefined,
+      stack: isProduction ? undefined : err.stack,
+    };
+
+    next(error);
+  } finally {
+    await session.endSession();
+  }
+};
+
+export const getUserSubscription = async (req, res, next) => {
+  try {
+    const user = await Usermodel.findById(req.user.id);
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "USER NOT FOUND!!!" });
+    }
+
+    const subscriptionId = req.params.id;
+    if (!subscriptionId || !mongoose.Types.ObjectId.isValid(subscriptionId)) {
+      return res.status(400).json({
+        success: false,
+        message: "Subscription  id is either not found or invalid!!!",
+      });
+    }
+
+    const subscription = await Subscription.findById(subscriptionId);
+    if (!subscription) {
+      return res.status(400).message("Subscription not found!!!");
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Subscription found!",
+      data: {
+        subscription,
+      },
+    });
+  } catch (err) {
+    const isProduction = config.NODE_ENV === "production" ? true : false;
+    const error = {
+      message: isProduction ? "Problem in delete subscriptions" : err.message,
+      statusCode: err.statusCode || 500,
+      stack: isProduction ? undefined : err.stack,
     };
 
     next(error);

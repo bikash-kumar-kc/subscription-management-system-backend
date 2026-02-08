@@ -1,16 +1,14 @@
 import { accountMail, transporter } from "../nodemailer/nodemailer.js";
 import { generateTemplateForCancellationSummary } from "./mass-cancellation-template.js";
 
-
 export const sendEmailForMassSubcriptionCancellation = async ({
-
   successfulCancellations = [],
   unsuccessfulCancellations = [],
   refundTo,
   emailTo,
 }) => {
   const html = generateTemplateForCancellationSummary({
-    userName:refundTo,
+    userName: refundTo,
     successfulCancellations,
     unsuccessfulCancellations,
   });
@@ -22,14 +20,14 @@ export const sendEmailForMassSubcriptionCancellation = async ({
     html,
   };
 
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error)
-      return console.log(
-        error,
-        "Error sending email for mass subscription cancellation!!!",
-      );
-
-    console.log("Email send: " + info.response);
+  try {
+    await transporter.sendMail(mailOptions);
     return true;
-  });
+  } catch (err) {
+    console.log(
+      "Failed to send email confirmation for cancelling mass subscription!!!" +
+        err,
+    );
+    return false;
+  }
 };
