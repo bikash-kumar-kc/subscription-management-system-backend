@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import morgan from "morgan";
 import fs from "node:fs";
 import cors from "cors";
+import helmet from "helmet";
 
 import workflowRouter from "./resources/workflow/workflow.routes.js";
 import { stripHook } from "./stripe/stripe.controller.js";
@@ -46,7 +47,6 @@ const errorLogs = fs.createWriteStream(
   },
 );
 
-
 // STRIPE WEB HOOK
 app.post(
   "/stripe-webhook",
@@ -59,6 +59,7 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(arcjet);
+app.use(helmet());
 
 app.use(
   morgan("combined", {
@@ -67,17 +68,22 @@ app.use(
 );
 
 // SETTING CORS
-app.use(cors({
-  origin:config.NODE_ENV==="development"?allowedOrigin.development:allowedOrigin.production,
-  credentials:true,
-  maxAge:86400,
-}));
+app.use(
+  cors({
+    origin:
+      config.NODE_ENV === "development"
+        ? allowedOrigin.development
+        : allowedOrigin.production,
+    credentials: true,
+    maxAge: 86400,
+  }),
+);
 
 // ALLOWING ACCESSING STATIC FILE IN CROSS ORIGIN
-app.use(path.join("/resources"),allowCrossOriginStaticResourceSharing);
+app.use(path.join("/resources"), allowCrossOriginStaticResourceSharing);
 
 // MIDDLEWARE FOR STATIC FILES
-app.use(express.static(path.join(__dirname,"../public")));
+app.use(express.static(path.join(__dirname, "../public")));
 app.use(
   "/static_files",
   express.static(path.join(__dirname, "../public/static_files")),
@@ -94,6 +100,14 @@ app.use("/api/v1/users", UserRoutes);
 app.use("/api/v1/subscriptions", SubscriptionRoutes);
 app.use("/payment", stripeRouter);
 app.use("/api/v1/workflows", workflowRouter);
+
+// HANDLING UNKNOWN ROUTES...
+app.use((req, res) => {
+  res.status(404).json({
+    status: "failed",
+    message: "Route not found",
+  });
+});
 
 // GLOBAL ERROR HANDLER
 app.use(globalErrorHandler);

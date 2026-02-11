@@ -118,15 +118,6 @@ const SubscriptionSchema = new mongoose.Schema(
 
     pausedAt: {
       type: Date,
-      // validate: {
-      //   validator: function (value) {
-      //     return (
-      //       new Date(value) >= new Date(this.startDate) &&
-      //       new Date(value) < new Date(this.renewalsDate)
-      //     );
-      //   },
-      //   message: "Invalid paused time !!!",
-      // },
     },
 
     canRenew: {
