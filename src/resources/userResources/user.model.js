@@ -42,6 +42,11 @@ const userSchema = new mongoose.Schema(
     imageUrl:{
       type:String,
       trim:true,
+    },
+
+    status:{
+      type:Boolean,
+      default:false
     }
   },
   { timestamps: true },

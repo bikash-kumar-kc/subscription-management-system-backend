@@ -23,3 +23,27 @@ const aj = arcjet({
 });
 
 export default aj;
+
+export const arcjetResendToken = arcjet({
+  key: config.ARCJET_TOKEN,
+  rules: [
+    tokenBucket({
+      mode: "LIVE",
+      refillRate: 1,
+      interval: "1m",
+      capacity: 1,
+    }),
+  ],
+});
+
+export const arcjectVerifyToken = arcjet({
+  key: config.ARCJET_TOKEN,
+  rules: [
+    tokenBucket({
+      mode: "LIVE",
+      refillRate: 3,
+      interval: "1m",
+      capacity: 3,
+    }),
+  ],
+});

@@ -1,5 +1,6 @@
 import { config } from "../../config/config.js";
-import { generateToken } from "../../services/jwt.js";
+import EmailVerification from "../../services/emailVerificationService.js";
+// import { generateToken } from "../../services/jwt.js";
 import UserModel from "../userResources/user.model.js";
 import mongoose from "mongoose";
 
@@ -12,56 +13,59 @@ export const signUp = async (req, res, next) => {
     const isExist = await UserModel.isUserExist(email);
 
     if (isExist) {
-      const error = new Error("User already exist!!!");
-      error.statusCode = 400;
-      next(error);
-      return;
+      return res
+        .status(400)
+        .json({ success: false, message: "User already exist!!!" });
     }
     const newUser = await UserModel.create(
-      [{ name: name, email: email, password: password }],
+      [{ name: name, email: email, password: password, status: false }],
       { session },
     );
 
-    const token = generateToken(newUser[0]._id);
-
-    if (!token) {
-      const error = new Error("Failed to generate token!!");
-      error.statusCode = 500;
-      next(error);
-      return;
-    }
-
-    const isProduction = !(config.NODE_ENV === "development");
-    const cookieOptions = {
-      httpOnly: true,
-      secure: isProduction ? true : false,
-      sameSite: isProduction ? "none" : "lax",
-      path: "/",
-    };
-
-    res.cookie("accessToken", token, {
-      ...cookieOptions,
-      maxAge: 24 * 60 * 60 * 1000,
+    const storeCredential = await EmailVerification.storeCredential({
+      email,
+      session,
     });
 
+    if (!storeCredential) {
+      await session.abortTransaction();
+      throw new Error("Failed to store credential for email verfication!!!");
+    }
+
+    // FIRST OTP SENDS FROM HERE
+    const isEmailSend = await EmailVerification.sendEmail({
+      otp: storeCredential.otp,
+      email,
+      userName: name,
+    });
+
+    if (!isEmailSend) {
+      console.log("failed to send email!!!");
+    }
+
     await session.commitTransaction();
-    session.endSession();
 
     return res.status(201).json({
       success: true,
       message: "User created Successfully!",
       data: {
         user: newUser[0],
+        status: newUser.status,
       },
-      token,
     });
   } catch (err) {
     await session.abortTransaction();
-    session.endSession();
-    const error = new Error("Problem in server!!!");
-    error.errors = err.errors;
+    const isProduction = config.NODE_ENV === "production" ? true : false;
+    const error = {
+      message: isProduction
+        ? "Problem in cancelling subscription"
+        : err.message,
+      statusCode: err.statusCode || 500,
+      stack: isProduction ? undefined : err.stack,
+    };
     next(error);
-    return;
+  } finally {
+    session.endSession();
   }
 };
 

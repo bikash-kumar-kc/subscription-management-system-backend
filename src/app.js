@@ -18,6 +18,7 @@ import stripeRouter from "./stripe/stripe.route.js";
 import { allowedOrigin } from "./utils/constants/origin.js";
 import { config } from "./config/config.js";
 import { allowCrossOriginStaticResourceSharing } from "./utils/allowCrossOriginStaticResourceSharing.js";
+import otpRouter from "./resources/otpResources/otp.route.js";
 
 const app = express();
 
@@ -100,6 +101,7 @@ app.use("/api/v1/users", UserRoutes);
 app.use("/api/v1/subscriptions", SubscriptionRoutes);
 app.use("/payment", stripeRouter);
 app.use("/api/v1/workflows", workflowRouter);
+app.use("/api/v1/otp", otpRouter);
 
 // HANDLING UNKNOWN ROUTES...
 app.use((req, res) => {

@@ -1,4 +1,4 @@
-import aj from "../arcjet/arcjet.js";
+import aj, { arcjectVerifyToken, arcjetResendToken } from "../arcjet/arcjet.js";
 
 const arcjet = async (req, res, next) => {
   try {
@@ -15,10 +15,40 @@ const arcjet = async (req, res, next) => {
 
       return res.status(400).json({ message: "BAD_REQUEST" });
     }
-    next()
+    next();
   } catch (error) {
     next(error);
   }
 };
 
 export default arcjet;
+
+export const arcjetMiddlewareResendOtp = async (req, res, next) => {
+  try {
+    const decision = await arcjetResendToken.protect(req, { requested: 1 });
+    if (decision.isDenied()) {
+      if (decision.reason.isRateLimit()) {
+        return res.status(429).json({ message: "Rate Limit Exceed" });
+      }
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const arcjetMiddlewareVerifyOtp = async (req,res,next)=>{
+   try {
+    const decision = await arcjectVerifyToken.protect(req, { requested: 1 });
+    if (decision.isDenied()) {
+      if (decision.reason.isRateLimit()) {
+        return res.status(429).json({ message: "Rate Limit Exceed" });
+      }
+    }
+    next();
+  } catch (error) {
+    next(error);
+  }
+}
+
+
