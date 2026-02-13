@@ -26,6 +26,7 @@ const _config = {
   AUTHOR_MAIL:process.env.AUTHOR_MAIL,
   REDIS_HOST:process.env.REDIS_HOST,
   REDIS_PORT:process.env.REDIS_PORT,
+  REDIS_PASSWORD:process.env.REDIS_PASSWORD,
 };
 
 export const config = Object.freeze(_config);

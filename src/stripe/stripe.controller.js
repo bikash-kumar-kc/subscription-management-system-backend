@@ -39,7 +39,7 @@ export const paymentInitiator = async (req, res, next) => {
         .json({ success: false, message: "USER NOT FOUND!!!" });
     }
 
-    const product = await ProductModel.findById(productId);
+    const product = await ProductModel.findOne({ _id: productId, frequency });
 
     if (subscriptionId) {
       if (!mongoose.Types.ObjectId.isValid(subscriptionId)) {
@@ -55,9 +55,9 @@ export const paymentInitiator = async (req, res, next) => {
         subscription.status == "cancel" ||
         subscription.status == "active";
 
-        console.log("isValid:: ",isValid);
-        console.log("can renew:: ",subscription.can_renew())
-      
+      console.log("isValid:: ", isValid);
+      console.log("can renew:: ", subscription.can_renew());
+
       if (!subscription || !isValid || !subscription.can_renew()) {
         throw new Error("Subscription can not be repurchased or renew");
       }
@@ -138,12 +138,12 @@ export const stripHook = async (req, res) => {
     const productStatus = session.metadata.productStatus;
     const discount_rate = session.metadata.discount_rate;
     const subscriptionId = session.metadata.subscriptionId;
-    console.log("productStatus",productStatus);
-    console.log('discount_rate',discount_rate);
-    console.log("subscriptionId",subscriptionId);
-    console.log("userId",userId);
-    console.log("orderId",orderId);
-    console.log("serviceProvider",serviceProvider);
+    console.log("productStatus", productStatus);
+    console.log("discount_rate", discount_rate);
+    console.log("subscriptionId", subscriptionId);
+    console.log("userId", userId);
+    console.log("orderId", orderId);
+    console.log("serviceProvider", serviceProvider);
 
     if (event.type === "checkout.session.completed") {
       await PaymentModel.create({

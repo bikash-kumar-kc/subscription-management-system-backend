@@ -16,12 +16,10 @@ const stripePaymentProcess = async ({
 }) => {
   try {
     let newRepurchaseAmount, renewPrice, renewDiscountPercent, discount_rate;
-    let isStatus = status === "expired" || status === "cancel";
+    let isStatusCancelExpired = status === "expired" || status === "cancel";
     let isStatusActive = status === "active";
-    console.log("isStatus",isStatus);
-    console.log("isStatusActive",isStatusActive)
 
-    if (isStatus) {
+    if (isStatusCancelExpired) {
       const { newRepurchasePrice, discountRate } = calculateRePurchasePrice(
         item.price,
       );
@@ -36,13 +34,12 @@ const stripePaymentProcess = async ({
       );
       renewPrice = price;
       renewDiscountPercent = discountPercent;
-      console.log("price",price);
-      console.log("renewDiscountPercent",renewDiscountPercent);
-      console.log("-----------------status is active---------------")
+      console.log("price", price);
+      console.log("renewDiscountPercent", renewDiscountPercent);
+      console.log("-----------------status is active---------------");
     }
 
-    const dis=discount_rate || renewDiscountPercent;
-    console.log("dis",dis)
+    const dis = discount_rate || renewDiscountPercent;
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: [paymentMethod || "card"],
@@ -55,16 +52,16 @@ const stripePaymentProcess = async ({
               name: item.name,
             },
             unit_amount:
-              isStatus || isStatusActive
-                ? isStatus
+              isStatusCancelExpired || isStatusActive
+                ? isStatusCancelExpired
                   ? newRepurchaseAmount
                   : renewPrice
                 : item.amount,
             recurring: {
-              interval: frequency || "month",
+              interval: frequency || "monthly",
             },
           },
-          quantity: item.quantity,
+          quantity: item.quantity || 1,
         },
       ],
       success_url: config.SUCCESS_URL,

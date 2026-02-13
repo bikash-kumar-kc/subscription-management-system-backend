@@ -19,6 +19,7 @@ import { allowedOrigin } from "./utils/constants/origin.js";
 import { config } from "./config/config.js";
 import { allowCrossOriginStaticResourceSharing } from "./utils/allowCrossOriginStaticResourceSharing.js";
 import otpRouter from "./resources/otpResources/otp.route.js";
+import productRouters from "./resources/product/product.route.js";
 
 const app = express();
 
@@ -96,6 +97,7 @@ app.get("/", (req, res) => {
 });
 
 // ROUTES
+app.use("/api/v1/products",productRouters)
 app.use("/api/v1/auth", AuthRoutes);
 app.use("/api/v1/users", UserRoutes);
 app.use("/api/v1/subscriptions", SubscriptionRoutes);

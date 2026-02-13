@@ -38,7 +38,6 @@ export const createSubscription = async (req, res, next) => {
       throw new Error("Product is either required or invalid!!!");
 
     const isPayment = await PaymentModel.find({ orderId: productId });
-    console.log(isPayment);
     if (!isPayment[0] || isPayment[0].status !== "paid")
       return res
         .status(400)
