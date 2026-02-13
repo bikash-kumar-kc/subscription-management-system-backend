@@ -24,6 +24,8 @@ const _config = {
   STRIPE_WEBHOOK_SECRET:process.env.STRIPE_WEBHOOK_SECRET,
   FRONTEND_URL:process.env.FRONTEND_URL,
   AUTHOR_MAIL:process.env.AUTHOR_MAIL,
+  REDIS_HOST:process.env.REDIS_HOST,
+  REDIS_PORT:process.env.REDIS_PORT,
 };
 
 export const config = Object.freeze(_config);

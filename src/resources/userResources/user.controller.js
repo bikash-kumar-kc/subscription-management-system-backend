@@ -9,6 +9,7 @@ import uploadFile, { deleteFile } from "../../services/cloudinary.js";
 import { config } from "../../config/config.js";
 import generatePublicKey from "../../utils/generatePublicKey.js";
 import Subscription from "../subscriptionResources/subscription.model.js";
+import PaymentModel from "../payment/payment.model.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -253,6 +254,7 @@ export const deleteUser = async (req, res, next) => {
 
     // DELETE USER RELATED INFOS
     try {
+      await PaymentModel.deleteMany([{userId:user._id}],{session})
       await Subscription.deleteMany([{ user: user._id }], { session });
     } catch (error) {
       console.error("Error during cascade deletion:", error);
@@ -271,8 +273,13 @@ export const deleteUser = async (req, res, next) => {
     await session.commitTransaction();
 
     // Delete cookies
-
-    res.clearCookie("token");
+    const isProduction = config.NODE_ENV === "production" ? true : false;
+    res.clearCookie("accessToken", {
+      httpOnly: true,
+      secure: isProduction ? true : false,
+      sameSite: isProduction ? "none" : "lax",
+      path: "/",
+    });
 
     // Log successful deletion
     console.info("User deletion completed", {
