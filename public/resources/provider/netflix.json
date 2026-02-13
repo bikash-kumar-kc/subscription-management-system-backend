@@ -1,0 +1,253 @@
+{
+  "provider_id": "netflix_001",
+  "provider_name": "Netflix",
+  "last_updated": "2024-02-13",
+  "categories": [
+    {
+      "category_id": "movies",
+      "category_name": "Movies",
+      "content": [
+        {
+          "content_id": "movie_001",
+          "title": "The Irishman",
+          "image_url": "https://cdn.netflix.com/images/irishman_poster.jpg",
+          "description": "A hitman's decades-long journey through the mob world.",
+          "tags": ["Crime", "Drama", "Mafia", "Historical"]
+        },
+        {
+          "content_id": "movie_002",
+          "title": "Extraction 2",
+          "image_url": "https://cdn.netflix.com/images/extraction2_poster.jpg",
+          "description": "Tyler Rake returns for another high-stakes rescue mission.",
+          "tags": ["Action", "Thriller", "Explosive", "Intense"]
+        },
+        {
+          "content_id": "movie_003",
+          "title": "Glass Onion: A Knives Out Mystery",
+          "image_url": "https://cdn.netflix.com/images/glassonion_poster.jpg",
+          "description": "A whodunit mystery set on a Greek island with surprising twists.",
+          "tags": ["Mystery", "Comedy", "Whodunit", "Clever"]
+        },
+        {
+          "content_id": "movie_004",
+          "title": "Don't Look Up",
+          "image_url": "https://cdn.netflix.com/images/dontlookup_poster.jpg",
+          "description": "Scientists struggle to warn the world about an approaching comet.",
+          "tags": ["Comedy", "Drama", "Satire", "Dark Comedy"]
+        },
+        {
+          "content_id": "movie_005",
+          "title": "The Adam Project",
+          "image_url": "https://cdn.netflix.com/images/adamproject_poster.jpg",
+          "description": "A pilot travels back in time and meets his younger self.",
+          "tags": ["Sci-Fi", "Adventure", "Time Travel", "Family"]
+        }
+      ]
+    },
+    {
+      "category_id": "tv_shows",
+      "category_name": "TV Shows",
+      "content": [
+        {
+          "content_id": "tv_001",
+          "title": "Stranger Things",
+          "image_url": "https://cdn.netflix.com/images/strangerthings_poster.jpg",
+          "description": "Kids in a small town face supernatural mysteries and dangers.",
+          "tags": ["Sci-Fi", "Horror", "Mystery", "80s", "Supernatural"]
+        },
+        {
+          "content_id": "tv_002",
+          "title": "The Crown",
+          "image_url": "https://cdn.netflix.com/images/thecrown_poster.jpg",
+          "description": "The reign of Queen Elizabeth II told through decades of history.",
+          "tags": ["Historical", "Drama", "Biography", "Royal Family"]
+        },
+        {
+          "content_id": "tv_003",
+          "title": "Wednesday",
+          "image_url": "https://cdn.netflix.com/images/wednesday_poster.jpg",
+          "description": "Wednesday Addams solves mysteries at her boarding school.",
+          "tags": ["Mystery", "Comedy", "Dark Comedy", "Teen"]
+        },
+        {
+          "content_id": "tv_004",
+          "title": "Bridgerton",
+          "image_url": "https://cdn.netflix.com/images/bridgerton_poster.jpg",
+          "description": "Romance and scandal in Regency-era London high society.",
+          "tags": ["Romance", "Period Drama", "Historical", "British"]
+        },
+        {
+          "content_id": "tv_005",
+          "title": "Money Heist",
+          "image_url": "https://cdn.netflix.com/images/moneyheist_poster.jpg",
+          "description": "A mastermind leads an ambitious heist in Spain.",
+          "tags": ["Crime", "Thriller", "Heist", "Spanish"]
+        }
+      ]
+    },
+    {
+      "category_id": "documentaries",
+      "category_name": "Documentaries",
+      "content": [
+        {
+          "content_id": "doc_001",
+          "title": "Our Planet",
+          "image_url": "https://cdn.netflix.com/images/ourplanet_poster.jpg",
+          "description": "Stunning nature documentary exploring Earth's diverse ecosystems.",
+          "tags": ["Nature", "Wildlife", "Environment", "Educational"]
+        },
+        {
+          "content_id": "doc_002",
+          "title": "The Last Dance",
+          "image_url": "https://cdn.netflix.com/images/lastdance_poster.jpg",
+          "description": "Michael Jordan and the Chicago Bulls' legendary 1997-98 season.",
+          "tags": ["Sports", "Basketball", "Biography", "NBA"]
+        },
+        {
+          "content_id": "doc_003",
+          "title": "Formula 1: Drive to Survive",
+          "image_url": "https://cdn.netflix.com/images/drivetosurvive_poster.jpg",
+          "description": "Behind-the-scenes drama of Formula 1 racing.",
+          "tags": ["Sports", "Racing", "F1", "Competition"]
+        },
+        {
+          "content_id": "doc_004",
+          "title": "The Social Dilemma",
+          "image_url": "https://cdn.netflix.com/images/socialdilemma_poster.jpg",
+          "description": "Former tech insiders expose social media's dark side.",
+          "tags": ["Technology", "Social Media", "Privacy", "Eye-Opening"]
+        },
+        {
+          "content_id": "doc_005",
+          "title": "Tiger King",
+          "image_url": "https://cdn.netflix.com/images/tigerking_poster.jpg",
+          "description": "Wild true crime story of exotic animal owners in America.",
+          "tags": ["True Crime", "Wild", "Bizarre", "Shocking"]
+        }
+      ]
+    },
+    {
+      "category_id": "kids_family",
+      "category_name": "Kids & Family",
+      "content": [
+        {
+          "content_id": "kids_001",
+          "title": "Cocomelon",
+          "image_url": "https://cdn.netflix.com/images/cocomelon_poster.jpg",
+          "description": "Educational nursery rhymes and songs for young children.",
+          "tags": ["Educational", "Music", "Preschool", "Learning"]
+        },
+        {
+          "content_id": "kids_002",
+          "title": "The Sea Beast",
+          "image_url": "https://cdn.netflix.com/images/seabeast_poster.jpg",
+          "description": "A girl and monster hunter form an unlikely friendship.",
+          "tags": ["Adventure", "Animation", "Family", "Friendship"]
+        },
+        {
+          "content_id": "kids_003",
+          "title": "Puss in Boots: The Last Wish",
+          "image_url": "https://cdn.netflix.com/images/pussinboots_poster.jpg",
+          "description": "Puss seeks the Last Wish to restore his nine lives.",
+          "tags": ["Adventure", "Animation", "Comedy", "Action"]
+        },
+        {
+          "content_id": "kids_004",
+          "title": "Gabby's Dollhouse",
+          "image_url": "https://cdn.netflix.com/images/gabbysdollhouse_poster.jpg",
+          "description": "Gabby and her cat friends go on magical adventures.",
+          "tags": ["Educational", "Cats", "Crafts", "Preschool"]
+        },
+        {
+          "content_id": "kids_005",
+          "title": "Guillermo del Toro's Pinocchio",
+          "image_url": "https://cdn.netflix.com/images/pinocchio_poster.jpg",
+          "description": "A darker, beautiful take on the classic Pinocchio story.",
+          "tags": ["Animation", "Fantasy", "Musical", "Stop-Motion"]
+        }
+      ]
+    },
+    {
+      "category_id": "anime",
+      "category_name": "Anime",
+      "content": [
+        {
+          "content_id": "anime_001",
+          "title": "Attack on Titan",
+          "image_url": "https://cdn.netflix.com/images/attackontitan_poster.jpg",
+          "description": "Humans fight for survival against giant humanoid Titans.",
+          "tags": ["Action", "Dark Fantasy", "Post-Apocalyptic", "Intense"]
+        },
+        {
+          "content_id": "anime_002",
+          "title": "Demon Slayer",
+          "image_url": "https://cdn.netflix.com/images/demonslayer_poster.jpg",
+          "description": "A boy becomes a demon slayer to save his sister.",
+          "tags": ["Action", "Supernatural", "Historical", "Emotional"]
+        },
+        {
+          "content_id": "anime_003",
+          "title": "Cyberpunk: Edgerunners",
+          "image_url": "https://cdn.netflix.com/images/edgerunners_poster.jpg",
+          "description": "A street kid becomes a mercenary in dystopian Night City.",
+          "tags": ["Sci-Fi", "Cyberpunk", "Action", "Stylish"]
+        },
+        {
+          "content_id": "anime_004",
+          "title": "One Piece",
+          "image_url": "https://cdn.netflix.com/images/onepiece_poster.jpg",
+          "description": "A pirate crew searches for the legendary One Piece treasure.",
+          "tags": ["Adventure", "Comedy", "Pirates", "Epic"]
+        },
+        {
+          "content_id": "anime_005",
+          "title": "Vinland Saga",
+          "image_url": "https://cdn.netflix.com/images/vinlandsaga_poster.jpg",
+          "description": "A Viking's journey of revenge and redemption.",
+          "tags": ["Historical", "Action", "Vikings", "Epic"]
+        }
+      ]
+    },
+    {
+      "category_id": "standup_comedy",
+      "category_name": "Stand-Up Comedy",
+      "content": [
+        {
+          "content_id": "standup_001",
+          "title": "Dave Chappelle: The Dreamer",
+          "image_url": "https://cdn.netflix.com/images/chappelle_poster.jpg",
+          "description": "Dave Chappelle delivers another provocative comedy special.",
+          "tags": ["Comedy", "Stand-Up", "Provocative", "Controversial"]
+        },
+        {
+          "content_id": "standup_002",
+          "title": "Ali Wong: Single Lady",
+          "image_url": "https://cdn.netflix.com/images/aliwong_poster.jpg",
+          "description": "Ali Wong talks about life, relationships, and being single.",
+          "tags": ["Comedy", "Stand-Up", "Relatable", "Hilarious"]
+        },
+        {
+          "content_id": "standup_003",
+          "title": "John Mulaney: Baby J",
+          "image_url": "https://cdn.netflix.com/images/mulaney_poster.jpg",
+          "description": "John Mulaney shares personal stories about recovery and growth.",
+          "tags": ["Comedy", "Stand-Up", "Personal", "Honest"]
+        },
+        {
+          "content_id": "standup_004",
+          "title": "Kevin Hart: Reality Check",
+          "image_url": "https://cdn.netflix.com/images/kevinhart_poster.jpg",
+          "description": "Kevin Hart brings high-energy comedy about life and family.",
+          "tags": ["Comedy", "Stand-Up", "Energetic", "Family"]
+        },
+        {
+          "content_id": "standup_005",
+          "title": "Ricky Gervais: Armageddon",
+          "image_url": "https://cdn.netflix.com/images/gervais_poster.jpg",
+          "description": "Ricky Gervais tackles controversial topics with dark humor.",
+          "tags": ["Comedy", "Stand-Up", "Dark Humor", "Edgy"]
+        }
+      ]
+    }
+  ]
+}

@@ -22,12 +22,7 @@ const ProductSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: [0, "quantity can be more than 0 "],
-    },
-    status: {
-      type: String,
-      enum: ["availabe", "unavailable"],
-      default: "available",
-    },
+    }
   },
   { timestamps: true },
 );

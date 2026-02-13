@@ -10,7 +10,7 @@ class OtpController {
     this.isProduction = config.NODE_ENV === "production";
     const session = await mongoose.startSession();
     session.startTransaction();
-    console.log("---------here-------------");
+
     try {
       const { email, otp } = req.body;
       if (!email.trim() || !otp.trim()) {
