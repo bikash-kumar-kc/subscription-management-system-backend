@@ -3,19 +3,26 @@ import { transporter, accountMail } from "../nodemailer/nodemailer.js";
 import { emailVerificationTemplate } from "../utils/emailVerificationTemplate.js";
 
 class EmailVerification {
-  static storeCredential = async ({ email,session }) => {
+  static storeCredential = async ({ email, session }) => {
     try {
-        const otp = this.generateOtp();
-        console.log(otp)
-      const isSaved = await otpModel.create([{
-        email,
-        otp,
-      }],{new:true,session});
-console.log(isSaved)
+      const otp = this.generateOtp();
+      console.log(otp);
+      const isSaved = await otpModel.create(
+        [
+          {
+            email,
+            otp,
+          },
+        ],
+        { new: true, session },
+      );
+      console.log(isSaved);
       return isSaved[0];
     } catch (err) {
       console.log(err);
-      throw new Error("failed to store credential for email verification!!!" +err);
+      throw new Error(
+        "failed to store credential for email verification!!!" + err,
+      );
     }
   };
 
@@ -66,8 +73,6 @@ console.log(isSaved)
 
     return otp;
   };
-
-
 }
 
 export default EmailVerification;

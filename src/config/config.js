@@ -23,6 +23,7 @@ const _config = {
   UNSUCCESS_URL:process.env.UNSUCCESS_URL,
   STRIPE_WEBHOOK_SECRET:process.env.STRIPE_WEBHOOK_SECRET,
   FRONTEND_URL:process.env.FRONTEND_URL,
+  AUTHOR_MAIL:process.env.AUTHOR_MAIL,
 };
 
 export const config = Object.freeze(_config);

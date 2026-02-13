@@ -89,8 +89,10 @@ export const signIn = async (req, res, next) => {
     }
     const token = await user.matchPasswordAndGenerateToken(password);
     if (!token) {
-      const error = new Error("Password does not matched !!!");
-      error.statusCode = 401;
+      const error = {
+        message: "Password does not matched !!!",
+        statusCode: 401,
+      };
       next(error);
       return;
     }

@@ -1,5 +1,5 @@
 import Subscription from "../resources/subscriptionResources/subscription.model.js";
-import config from "../config/config.js";
+import {config} from "../config/config.js";
 const cronsJobController = async (req, res) => {
   try {
     const result_1 = await Subscription.updateMany(

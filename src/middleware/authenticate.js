@@ -1,15 +1,23 @@
+import { config } from "../config/config.js";
 import UserModel from "../resources/userResources/user.model.js";
 import { verifyToken } from "../services/jwt.js";
 
 const authenticate = async (req, res, next) => {
   try {
     let token;
-    console.log(req.headers)
-    if (
-      req.headers.authorization &&
-      req.headers.authorization.startsWith("Bearer")
-    ) {
-      token = req.headers.authorization.split(" ")[1];
+    let isProduction = config.NODE_ENV === "production" ? true : false;
+
+    if (isProduction) {
+      if (req.cookies && req.cookies.accessToken) {
+        token = req.cookies.accessToken;
+      }
+    } else {
+      if (
+        req.headers.authorization &&
+        req.headers.authorization.startsWith("Bearer")
+      ) {
+        token = req.headers.authorization.split(" ")[1];
+      }
     }
 
     if (!token) {
@@ -28,13 +36,11 @@ const authenticate = async (req, res, next) => {
 
     const user = await UserModel.findById(decode.id).select("-password");
     if (!user) {
-      return res
-        .status(404)
-        .json({
-          success: false,
-          message: "User not found!!!",
-          data: { id: decode.id },
-        });
+      return res.status(404).json({
+        success: false,
+        message: "User not found!!!",
+        data: { id: decode.id },
+      });
     }
 
     req.user = user;

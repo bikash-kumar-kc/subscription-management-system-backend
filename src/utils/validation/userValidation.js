@@ -47,10 +47,7 @@ class UserValidation {
       .withMessage("email must not be empty!!!")
       .isEmail()
       .withMessage("Invalid email format")
-      .custom((email) => {
-        if (email.endsWith("@spam.com")) throw "spam domains are not allowed";
-      })
-      .escape(),
+      ,
     body("password")
       .notEmpty()
       .withMessage("Password is required!!!")
